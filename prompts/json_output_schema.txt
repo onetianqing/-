@@ -1,0 +1,17 @@
+{
+  "findings": [
+    {
+      "type": "SQL Injection",
+      "severity": "high",
+      "file": "app.py",
+      "line": 42,
+      "function": "login",
+      "evidence": "...",
+      "root_cause": "...",
+      "exploit": "...",
+      "fix": "...",
+      "confidence": 0.9
+    }
+  ],
+  "summary": "..."
+}

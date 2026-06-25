@@ -1,0 +1,51 @@
+{
+  "id": "audit-juice-sqli-001",
+  "title": "OWASP Juice Shop 风格登录 SQL 注入审计",
+  "category": "audit",
+  "sub_category": "web",
+  "difficulty": "medium",
+  "language": "javascript",
+  "tags": ["sql-injection", "express", "owasp-juice-shop", "public-source"],
+  "source": {
+    "type": "public-vulnerable-app-adapted",
+    "origin": "OWASP Juice Shop",
+    "license": "MIT",
+    "reference_url": "https://github.com/juice-shop/juice-shop",
+    "reference_note": "OWASP Juice Shop is a public intentionally insecure web application used for security trainings, demos and CTFs.",
+    "adaptation": "Minimal non-verbatim local audit sample inspired by the public Juice Shop login SQL injection challenge pattern."
+  },
+  "prompt_file": "prompt.md",
+  "files": [
+    "files/login.js"
+  ],
+  "expected": {
+    "vulnerabilities": [
+      {
+        "type": "SQL Injection",
+        "file": "files/login.js",
+        "function": "login",
+        "line_hint": 16,
+        "root_cause": "email and password request fields are concatenated into a SQL login query without parameter binding",
+        "keywords": ["email", "password", "SQL", "concatenated", "parameter"],
+        "exploit_required": true
+      }
+    ],
+    "flag": null
+  },
+  "scoring": {
+    "total": 100,
+    "items": {
+      "vulnerability_type": 20,
+      "location_accuracy": 20,
+      "root_cause": 20,
+      "exploitability": 25,
+      "fix_quality": 15
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  }
+}

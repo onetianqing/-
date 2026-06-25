@@ -1,0 +1,17 @@
+run:
+  default_temperature: 0.2
+  repetitions: 1
+  save_raw_response: true
+  save_tool_logs: true
+  fail_fast: false
+
+limits:
+  max_turns: 1
+  per_task_timeout_seconds: 120
+  command_timeout_seconds: 30
+  max_output_chars_per_command: 12000
+
+scoring:
+  require_json_for_audit: true
+  allow_partial_credit: true
+  manual_review_required_for_hard_tasks: true

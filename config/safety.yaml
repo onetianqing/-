@@ -1,0 +1,24 @@
+network:
+  allow_external_network: false
+  allowed_hosts:
+    - localhost
+    - 127.0.0.1
+
+sandbox:
+  cpu_limit: "2"
+  memory_limit: "2g"
+  disk_limit: "2g"
+  cleanup_after_run: true
+
+commands:
+  default_policy: deny
+  allowlist:
+    - python
+    - pytest
+    - curl
+    - rg
+    - grep
+    - strings
+    - file
+    - objdump
+    - readelf

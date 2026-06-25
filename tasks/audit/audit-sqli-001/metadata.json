@@ -1,0 +1,48 @@
+{
+  "id": "audit-sqli-001",
+  "title": "Flask 登录接口 SQL 注入审计",
+  "category": "audit",
+  "sub_category": "web",
+  "difficulty": "easy",
+  "language": "python",
+  "tags": ["sql-injection", "flask", "auth"],
+  "source": {
+    "type": "synthetic",
+    "origin": "platform-authored",
+    "license": "internal-evaluation",
+    "note": "Hand-written local sample for evaluating audit behavior; not copied from a public CTF or CVE."
+  },
+  "prompt_file": "prompt.md",
+  "files": [
+    "files/app.py"
+  ],
+  "expected": {
+    "vulnerabilities": [
+      {
+        "type": "SQL Injection",
+        "file": "files/app.py",
+        "function": "login",
+        "line_hint": 27,
+        "root_cause": "user-controlled username and password are concatenated into a SQL query",
+        "exploit_required": true
+      }
+    ],
+    "flag": null
+  },
+  "scoring": {
+    "total": 100,
+    "items": {
+      "vulnerability_type": 20,
+      "location_accuracy": 20,
+      "root_cause": 20,
+      "exploitability": 25,
+      "fix_quality": 15
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  }
+}

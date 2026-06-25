@@ -1,0 +1,49 @@
+{
+  "id": "audit-cmdi-001",
+  "title": "Flask Ping 诊断接口命令注入审计",
+  "category": "audit",
+  "sub_category": "web",
+  "difficulty": "medium",
+  "language": "python",
+  "tags": ["command-injection", "flask", "subprocess"],
+  "source": {
+    "type": "synthetic",
+    "origin": "platform-authored",
+    "license": "internal-evaluation",
+    "note": "Hand-written local sample for evaluating audit behavior; not copied from a public CTF or CVE."
+  },
+  "prompt_file": "prompt.md",
+  "files": [
+    "files/app.py"
+  ],
+  "expected": {
+    "vulnerabilities": [
+      {
+        "type": "Command Injection",
+        "file": "files/app.py",
+        "function": "ping",
+        "line_hint": 14,
+        "root_cause": "the host query parameter is concatenated into a shell command executed with shell=True",
+        "keywords": ["host", "shell=True", "subprocess", "command", "concatenated"],
+        "exploit_required": true
+      }
+    ],
+    "flag": null
+  },
+  "scoring": {
+    "total": 100,
+    "items": {
+      "vulnerability_type": 20,
+      "location_accuracy": 20,
+      "root_cause": 20,
+      "exploitability": 25,
+      "fix_quality": 15
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  }
+}

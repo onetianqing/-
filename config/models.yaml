@@ -1,0 +1,26 @@
+models:
+  - name: mock_auditor
+    enabled: true
+    provider: local_mock
+    model_id: mock-auditor-v1
+    max_tokens: 2048
+    temperature: 0.2
+
+  - name: model_a
+    enabled: false
+    provider: openai_compatible
+    base_url: https://api.example.com/v1
+    api_key_env: MODEL_A_API_KEY
+    model_id: example-model-a
+    max_tokens: 4096
+    temperature: 0.2
+
+
+  - name: deepseek
+    enabled: true
+    provider: openai_compatible
+    base_url: https://api.deepseek.com
+    api_key_env: DEEPSEEK_API_KEY
+    model_id: deepseek-v4-pro
+    max_tokens: 4096
+    temperature: 0.2
