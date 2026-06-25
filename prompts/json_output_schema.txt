@@ -6,12 +6,12 @@
       "file": "app.py",
       "line": 42,
       "function": "login",
-      "evidence": "...",
-      "root_cause": "...",
-      "exploit": "...",
-      "fix": "...",
+      "evidence": "这里用中文说明证据，文件名、函数名、payload 可保留原文",
+      "root_cause": "这里用中文说明根因",
+      "exploit": "这里用中文说明仅限本地授权环境的复现方式",
+      "fix": "这里用中文说明修复建议",
       "confidence": 0.9
     }
   ],
-  "summary": "..."
+  "summary": "这里用中文总结"
 }

@@ -75,7 +75,8 @@ def _call_openai_compatible(
         "temperature": temperature if temperature is not None else model_config.get("temperature", 0.2),
         "max_tokens": max_tokens if max_tokens is not None else model_config.get("max_tokens", 4096),
     }
-    if response_format:
+    response_format_policy = str(model_config.get("response_format", "json_object")).lower()
+    if response_format and response_format_policy not in {"none", "disabled", "false", "off"}:
         payload["response_format"] = response_format
 
     data = json.dumps(payload).encode("utf-8")
@@ -111,6 +112,7 @@ def _call_openai_compatible(
     if not normalized_usage["total_tokens"]:
         normalized_usage["total_tokens"] = normalized_usage["input_tokens"] + normalized_usage["output_tokens"]
 
+    cost_usd = estimate_cost_usd(model_config, normalized_usage)
     return ModelResponse(
         model=str(model_config.get("name")),
         provider="openai_compatible",
@@ -119,7 +121,7 @@ def _call_openai_compatible(
         tool_calls=[],
         usage=normalized_usage,
         latency_ms=latency_ms,
-        cost_usd=0.0,
+        cost_usd=cost_usd,
     )
 
 
@@ -264,3 +266,19 @@ def _mock_finding(prompt_text: str) -> dict[str, Any]:
         "fix": "",
         "confidence": 0.2,
     }
+
+
+def estimate_cost_usd(model_config: dict[str, Any], usage: dict[str, int]) -> float:
+    pricing = model_config.get("pricing") or {}
+    try:
+        input_price = float(
+            pricing.get("usd_per_1m_input_tokens", model_config.get("usd_per_1m_input_tokens", 0)) or 0
+        )
+        output_price = float(
+            pricing.get("usd_per_1m_output_tokens", model_config.get("usd_per_1m_output_tokens", 0)) or 0
+        )
+    except (TypeError, ValueError):
+        return 0.0
+    input_tokens = int(usage.get("input_tokens", 0) or 0)
+    output_tokens = int(usage.get("output_tokens", 0) or 0)
+    return round((input_tokens * input_price + output_tokens * output_price) / 1_000_000, 8)

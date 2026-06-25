@@ -1,4 +1,4 @@
-models:
+﻿models:
   - name: mock_auditor
     enabled: true
     provider: local_mock
@@ -14,7 +14,8 @@ models:
     model_id: example-model-a
     max_tokens: 4096
     temperature: 0.2
-
+    rmb_per_1m_input_tokens: 0
+    rmb_per_1m_output_tokens: 0
 
   - name: deepseek
     enabled: true
@@ -24,3 +25,17 @@ models:
     model_id: deepseek-v4-pro
     max_tokens: 4096
     temperature: 0.2
+    rmb_per_1m_input_tokens: 3
+    rmb_per_1m_output_tokens: 6
+
+  - name: glm
+    enabled: true
+    provider: openai_compatible
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: GLM_API_KEY
+    model_id: glm-5.2
+    max_tokens: 4096
+    temperature: 0.2
+    response_format: none
+    rmb_per_1m_input_tokens: 8
+    rmb_per_1m_output_tokens: 28

@@ -1186,3 +1186,433 @@ reports/generate_report.py 已更新：
 3. 1 道 cve-minimal-reproduction CVE 最小复现题。
 
 后续建议逐步降低 synthetic 在正式评测中的占比，把它们保留为 smoke test；正式横评优先使用 public-ctf-adapted、public-vulnerable-app-adapted、cve-minimal-reproduction 和 real-project-regression。
+
+
+============================================================
+21. v0.5 实现记录（2026-06-25）
+============================================================
+
+本次迭代处理两个实际使用问题：
+
+1. 模型原始输出为什么可能是英文。
+2. 如何接入 GLM / 智谱 API。
+
+21.1 原始输出语言控制
+
+问题原因：
+
+1. results/raw/<run_id>/<model>/<task_id>.json 中的 final_answer 是模型原始回答。
+2. 早期版本的 JSON schema 示例、expected root_cause、keywords 和部分题目代码注释主要是英文。
+3. 如果 prompt 没有强约束输出语言，模型容易跟随 schema 示例和代码上下文输出英文。
+
+已完成改动：
+
+1. prompts/audit_prompt.txt 增加中文输出要求：
+   - JSON key 必须保持指定 schema，不翻译 key。
+   - JSON 字符串 value 应尽量使用中文。
+   - 漏洞名、文件名、函数名、参数名、payload、CVE 编号、API 名称等专业名词可以保留英文。
+2. prompts/json_output_schema.txt 将示例 value 改为中文说明。
+3. 报告生成器继续只负责汇总、评分和图表展示，不会翻译模型原始答案。
+
+21.2 GLM / 智谱 API 接入
+
+官方文档信息（2026-06-25 查询）：
+
+1. 智谱开放平台支持 OpenAI SDK 兼容调用。
+2. 通用 Chat Completions 端点示例：
+   - https://open.bigmodel.cn/api/paas/v4/chat/completions
+3. 平台配置中的 base_url 应写到 v4 层：
+   - https://open.bigmodel.cn/api/paas/v4
+4. 当前官方快速开始示例模型：
+   - glm-5.2
+
+config/models.yaml 示例：
+
+models:
+  - name: glm
+    enabled: true
+    provider: openai_compatible
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: GLM_API_KEY
+    model_id: glm-5.2
+    max_tokens: 4096
+    temperature: 0.2
+    response_format: none
+
+PowerShell 运行示例：
+
+$env:GLM_API_KEY="your_glm_api_key"
+python runners/run_eval.py --models glm --category audit --source-type public-vulnerable-app-adapted,cve-minimal-reproduction --run-id glm-public-v05
+python reports/generate_report.py --run-id glm-public-v05
+
+21.3 response_format 策略
+
+不同 OpenAI-compatible 厂商对 response_format / JSON mode 的支持程度不同。
+
+已完成改动：
+
+1. model_client.py 增加模型级 response_format 策略。
+2. 默认仍会发送：
+   - response_format: {"type": "json_object"}
+3. 如果模型配置中设置：
+   - response_format: none
+   平台就不会向该模型发送 response_format 参数，只依赖 prompt 要求输出 JSON。
+
+建议：
+
+1. DeepSeek 等明确支持 JSON mode 的模型可使用 response_format: json_object。
+2. GLM 先使用 response_format: none；如果确认当前账户和模型支持 JSON mode，再改为 json_object 做对比。
+3. 如果某个模型返回 400 Bad Request，优先检查 response_format、model_id、base_url 和 api_key_env。
+
+
+============================================================
+22. v0.6 实现记录（2026-06-25）
+============================================================
+
+本次迭代升级报告与图表展示，目标是让同一次 run 的多个模型更容易横向比较，并能看到每道题为什么扣分。
+
+22.1 多模型图表颜色
+
+HTML 报告中“按模型平均分”图表已改为按模型分配固定颜色。
+
+效果：
+
+1. 同一个 run 中如果包含 deepseek、glm 等多个模型，会在同一张柱状图中展示。
+2. 每个模型使用不同颜色，便于在图表和展开明细中对应。
+3. 模型颜色只影响展示，不影响评分数据。
+
+22.2 分数组成堆叠图
+
+新增“按模型分数组成”图表。
+
+该图表从 grade_details.per_expected[].items 读取细分评分，并按以下项目堆叠：
+
+1. 漏洞类型：20 分
+2. 定位准确性：20 分
+3. 根因解释：20 分
+4. 复现方式：25 分
+5. 修复建议：15 分
+
+用途：
+
+1. 快速看出模型主要差距来自哪类能力。
+2. 避免只看总分，看不到短板。
+3. 为后续能力画像雷达图和按任务类型统计打基础。
+
+22.3 明细结果按模型合并
+
+旧版本：
+
+1. 明细表是一行一个模型-任务结果。
+2. 同一次测试中，一个模型跑三道题就显示三行。
+3. 多模型对比时表格会很长。
+
+新版本：
+
+1. HTML 报告的“模型任务明细”按模型合并。
+2. 每个模型是一个可展开区域。
+3. 点击模型后展开该模型在每道任务上的结果。
+4. 每道任务显示：
+   - 任务 ID
+   - 任务标题
+   - 漏洞类型
+   - 平均分
+   - 运行次数
+   - 五个评分项得分
+   - 扣分项和简短扣分原因
+
+22.4 扣分原因
+
+报告会基于评分项缺失自动生成简短扣分说明：
+
+1. 漏洞类型扣分：
+   - 漏洞类型没有完全匹配标准答案或缺少常见别名。
+2. 定位准确性扣分：
+   - 文件、函数或行号定位不够准确。
+3. 根因解释扣分：
+   - 根因关键词覆盖不足，解释没有命中关键数据流或危险调用。
+4. 复现方式扣分：
+   - 复现方式、payload 或本地验证步骤不够明确。
+5. 修复建议扣分：
+   - 修复建议缺少关键措施，或没有直接阻断漏洞成因。
+6. JSON 格式扣分：
+   - JSON 解析失败或输出不符合要求。
+
+说明：
+
+这些扣分原因来自规则评分器的细分项，是快速定位模型答案短板的解释，不等同于人工复核结论。hard 任务仍应人工复核。
+
+22.5 DeepSeek 与 GLM 对比建议命令
+
+同一个 run-id 中运行多个模型，报告会自动合并对比：
+
+python runners/run_eval.py --models deepseek,glm --category audit --source-type public-vulnerable-app-adapted,cve-minimal-reproduction --run-id deepseek-vs-glm-v06
+python reports/generate_report.py --run-id deepseek-vs-glm-v06
+
+输出：
+
+1. results/scored/deepseek-vs-glm-v06.jsonl
+2. results/raw/deepseek-vs-glm-v06/deepseek/
+3. results/raw/deepseek-vs-glm-v06/glm/
+4. results/reports/deepseek-vs-glm-v06.md
+5. results/reports/deepseek-vs-glm-v06.html
+
+
+============================================================
+23. v0.7 实现记录（2026-06-25）
+============================================================
+
+本次迭代是报告图表细节增强和当前功能边界澄清。
+
+23.1 模型分数组成图增加分数标注
+
+HTML 报告中的“按模型分数组成”堆叠柱状图已更新：
+
+1. 每个评分段直接显示该段得分，例如 20.0、25.0。
+2. 鼠标悬停仍保留 tooltip，显示“评分项 得分/满分”。
+3. 如果某项得分为 0，没有可见色块；该项仍会在模型任务明细的评分项表格中显示 0/满分。
+
+23.2 当前可运行测试范围
+
+截至 v0.7，平台实际可运行的评测类型仍只有：
+
+1. 单轮代码审计 audit。
+
+尚未实现：
+
+1. CTF Docker 靶场。
+2. 多轮 agent / tool use。
+3. Patch 修复验证。
+4. 日志、流量与告警分析。
+5. 跨 run 合并报告。
+
+说明：
+
+当前平台的重点仍是先把“读取审计任务 -> 调模型 -> 保存原始答案 -> 规则评分 -> 中文图表报告”这一条链路打磨稳定。后续再进入 CTF、Patch 和日志分析阶段。
+
+
+============================================================
+24. v0.8 实现记录（2026-06-25）
+============================================================
+
+本次迭代增强结果管理能力，重点是跨 run 合并报告和报告索引页。
+
+24.1 多 run 合并报告
+
+旧方式：
+
+1. 推荐在同一个 run-id 中同时运行多个模型。
+2. 如果 DeepSeek 和 GLM 已经分开跑过，需要重新跑一次才能得到合并对比报告。
+
+新方式：
+
+reports/generate_report.py 新增：
+
+1. --run-ids
+   - 逗号分隔的多个历史 run id。
+2. --output-id
+   - 合并报告输出名称。
+
+示例：
+
+python reports/generate_report.py --run-ids deepseek-public-v05,glm-public-v05 --output-id deepseek-vs-glm-merged
+
+输出：
+
+1. results/reports/deepseek-vs-glm-merged.md
+2. results/reports/deepseek-vs-glm-merged.html
+
+合并逻辑：
+
+1. 读取每个 results/scored/<run_id>.jsonl。
+2. 保留每行原始 run_id。
+3. 按模型、漏洞类型、任务等维度聚合展示。
+4. 如果同一模型同一任务在多个 run 中重复出现，任务明细显示平均分和运行次数。
+
+24.2 报告索引页
+
+reports/generate_report.py 新增：
+
+python reports/generate_report.py --index
+
+输出：
+
+results/reports/index.html
+
+索引页会扫描 results/scored/*.jsonl，并展示：
+
+1. run id
+2. 模型列表
+3. 任务数
+4. 结果数
+5. 平均分
+6. 成功率
+7. 已存在的 HTML / Markdown 报告链接
+
+用途：
+
+1. 快速查看历史评测。
+2. 找到已生成的报告。
+3. 判断哪些 run 适合合并对比。
+
+24.3 使用建议
+
+1. 新评测优先使用同一个 run-id 同时跑多个模型：
+
+python runners/run_eval.py --models deepseek,glm --category audit --source-type public-vulnerable-app-adapted,cve-minimal-reproduction --run-id deepseek-vs-glm-v08
+
+2. 已经分开跑过的历史结果，使用 --run-ids 合并：
+
+python reports/generate_report.py --run-ids deepseek-public-v05,glm-public-v05 --output-id deepseek-vs-glm-history
+
+3. 定期生成索引页：
+
+python reports/generate_report.py --index
+
+
+============================================================
+25. v0.9 实现记录（2026-06-26）
+============================================================
+
+本次迭代新增 token 成本估算和成本维度报告。
+
+25.1 模型成本配置
+
+config/models.yaml 支持以下字段：
+
+usd_per_1m_input_tokens: 0
+usd_per_1m_output_tokens: 0
+
+含义：
+
+1. usd_per_1m_input_tokens：每 100 万输入 token 的美元价格。
+2. usd_per_1m_output_tokens：每 100 万输出 token 的美元价格。
+
+说明：
+
+1. 各厂商和模型价格经常变化，平台不内置固定价格。
+2. 用户需要按当前账户、模型和计费档位手动填写。
+3. 未填写或为 0 时，成本按 0 记录。
+4. 字段采用扁平形式，兼容平台内置的轻量 YAML 解析器。
+
+25.2 成本计算
+
+runners/model_client.py 在收到模型 usage 后计算：
+
+cost_usd = (input_tokens * input_price + output_tokens * output_price) / 1_000_000
+
+结果写入每行 scored JSONL 的：
+
+cost_usd
+
+25.3 报告展示
+
+reports/generate_report.py 已增强：
+
+1. Markdown 概览新增：
+   - 平均成本
+   - 总成本
+2. Markdown 分组表新增：
+   - 平均成本
+   - 总成本
+3. HTML KPI 新增：
+   - 平均成本
+   - 总成本
+4. HTML 图表新增：
+   - 按模型平均成本
+5. 模型展开卡片新增：
+   - 总成本
+6. 报告索引页新增：
+   - 总成本
+
+25.4 使用示例
+
+在 config/models.yaml 中配置价格：
+
+models:
+  - name: deepseek
+    ...
+    usd_per_1m_input_tokens: 0
+    usd_per_1m_output_tokens: 0
+
+重新运行评测后生成报告：
+
+python runners/run_eval.py --models deepseek,glm --category audit --source-type public-vulnerable-app-adapted,cve-minimal-reproduction --run-id cost-v09
+python reports/generate_report.py --run-id cost-v09
+
+注意：
+
+历史 run 如果当时没有记录 cost_usd 或价格为 0，重新生成报告也不会凭空计算成本；需要重新运行评测，或后续实现离线重算成本工具。
+
+
+============================================================
+26. v0.10 实现记录（2026-06-26）
+============================================================
+
+本次迭代新增审计答案质量诊断。
+
+26.1 目标
+
+评分只能回答“得了多少分”，但评测时还需要知道模型输出是否健康，例如：
+
+1. 是否输出合法 JSON。
+2. 是否缺少关键字段。
+3. 是否没有输出 finding。
+4. 是否引用了题目不存在的文件。
+5. 是否引用了标准答案之外的函数名。
+
+因此新增 answer_diagnosis 字段，用于辅助解释结果。
+
+26.2 实现位置
+
+1. graders/audit_grader.py
+   - 新增 diagnose_audit_answer(task_metadata, final_answer)。
+2. runners/run_eval.py
+   - 每次评测后写入 answer_diagnosis。
+3. reports/generate_report.py
+   - 新增“答案质量概览”。
+   - 模型任务明细中新增“答案质量诊断”。
+
+26.3 诊断字段
+
+answer_diagnosis 示例：
+
+{
+  "valid_json": true,
+  "parse_error": null,
+  "finding_count": 1,
+  "missing_fields": [],
+  "hallucinated_files": [],
+  "unknown_functions": [],
+  "issues": [],
+  "issue_count": 0
+}
+
+字段说明：
+
+1. valid_json：模型输出是否为合法 JSON。
+2. finding_count：findings 数量。
+3. missing_fields：缺失的必填字段。
+4. hallucinated_files：不在题目文件列表中的文件名。
+5. unknown_functions：不在标准答案函数列表中的函数名。
+6. issues：中文可读问题说明。
+7. issue_count：问题数量。
+
+26.4 报告展示
+
+Markdown 和 HTML 报告新增：
+
+1. 答案质量概览：
+   - 合法 JSON 率
+   - 平均 finding 数
+   - 平均问题数
+   - 常见问题
+2. 模型任务明细：
+   - 每道任务的答案质量诊断问题。
+
+26.5 注意事项
+
+1. 诊断不直接改变 score。
+2. 诊断是规则检查，不等于人工复核。
+3. 历史 run 没有 answer_diagnosis 字段，报告会显示“无数据”。
+4. 未来可以考虑把严重结构问题纳入扣分规则，例如 JSON 不合法、缺少 findings、臆造文件等。

@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from graders.audit_grader import grade_audit
+from graders.audit_grader import diagnose_audit_answer, grade_audit
 from runners.config_loader import load_yaml
 from runners.model_client import ModelClientError, call_model
 
@@ -167,6 +167,7 @@ def run_one(
 
     raw_path = save_raw(run_id, str(model.get("name")), str(metadata.get("id")), raw_response)
     grade = grade_audit(metadata, final_answer) if not error else None
+    diagnosis = diagnose_audit_answer(metadata, final_answer) if not error else {"issues": [error], "issue_count": 1}
     now = datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
     row = {
         "run_id": run_id,
@@ -195,6 +196,7 @@ def run_one(
         "score": int(grade.score) if grade else 0,
         "grader": grade.grader if grade else "not_graded",
         "grade_details": grade.details if grade else {"error": error},
+        "answer_diagnosis": diagnosis,
         "latency_ms": raw_response.get("latency_ms", 0),
         "usage": raw_response.get("usage", {}),
         "cost_usd": raw_response.get("cost_usd", 0.0),

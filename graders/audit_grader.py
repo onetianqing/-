@@ -86,6 +86,69 @@ def grade_audit(task_metadata: dict[str, Any], final_answer: str) -> GradeResult
     return GradeResult(score=score, success=score >= 80, grader=GRADER_NAME, details=details)
 
 
+def diagnose_audit_answer(task_metadata: dict[str, Any], final_answer: str) -> dict[str, Any]:
+    parsed, parse_error = _load_model_json(final_answer)
+    expected_files = {str(item).replace("\\", "/") for item in task_metadata.get("files", [])}
+    expected_functions = {
+        str(vuln.get("function"))
+        for vuln in task_metadata.get("expected", {}).get("vulnerabilities", [])
+        if vuln.get("function")
+    }
+    findings = []
+    if isinstance(parsed, dict) and isinstance(parsed.get("findings"), list):
+        findings = parsed.get("findings", [])
+
+    issues: list[str] = []
+    missing_fields: list[str] = []
+    hallucinated_files: list[str] = []
+    unknown_functions: list[str] = []
+    required_fields = ["type", "severity", "file", "line", "function", "evidence", "root_cause", "exploit", "fix", "confidence"]
+
+    if parse_error:
+        issues.append("输出不是合法 JSON 或包含额外文本。")
+    if parsed is not None and not isinstance(parsed, dict):
+        issues.append("JSON 顶层不是对象。")
+    if isinstance(parsed, dict) and "findings" not in parsed:
+        issues.append("JSON 缺少 findings 字段。")
+    if isinstance(parsed, dict) and "findings" in parsed and not isinstance(parsed.get("findings"), list):
+        issues.append("findings 不是数组。")
+    if not findings and not parse_error:
+        issues.append("没有输出任何 finding。")
+
+    for index, finding in enumerate(findings):
+        if not isinstance(finding, dict):
+            issues.append(f"finding[{index}] 不是对象。")
+            continue
+        for field in required_fields:
+            value = finding.get(field)
+            if field not in finding or value is None or value == "" or value == []:
+                missing_fields.append(f"finding[{index}].{field}")
+        file_value = str(finding.get("file") or "").replace("\\", "/")
+        if file_value and expected_files and file_value not in expected_files and file_value.split("/")[-1] not in {f.split("/")[-1] for f in expected_files}:
+            hallucinated_files.append(file_value)
+        function_value = str(finding.get("function") or "")
+        if function_value and expected_functions and function_value not in expected_functions:
+            unknown_functions.append(function_value)
+
+    if missing_fields:
+        issues.append("部分 finding 缺少必填字段。")
+    if hallucinated_files:
+        issues.append("输出包含题目文件列表之外的文件名。")
+    if unknown_functions:
+        issues.append("输出包含标准答案之外的函数名。")
+
+    return {
+        "valid_json": parse_error is None,
+        "parse_error": parse_error,
+        "finding_count": len(findings),
+        "missing_fields": missing_fields,
+        "hallucinated_files": sorted(set(hallucinated_files)),
+        "unknown_functions": sorted(set(unknown_functions)),
+        "issues": issues,
+        "issue_count": len(issues),
+    }
+
+
 def _grade_expected_item(
     expected: dict[str, Any],
     scoring: dict[str, Any],

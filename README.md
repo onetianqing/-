@@ -53,6 +53,19 @@ python reports/generate_report.py --latest
 
 报告会同时生成 Markdown 和 HTML。HTML 是本地静态文件，内置 SVG 图表，不依赖网络或 CDN。
 
+HTML 报告支持模型对比：
+
+- 同一个 `run-id` 中的多个模型会合并在一份报告里。
+- “按模型平均分”会用不同颜色展示不同模型。
+- “按模型分数组成”会展示漏洞类型、定位、根因、复现方式、修复建议五个评分项的堆叠柱状图。
+- “模型任务明细”会按模型合并，点击模型可以展开每道任务的结果。
+- 每道任务会展示分数组成、扣分项和简短扣分原因。
+- “按模型分数组成”堆叠图会在每个评分段上直接标注该段得分。
+
+## 当前测试范围
+
+当前可运行的评测类型只有单轮代码审计 `audit`。CTF Docker 靶场、Patch 修复验证、日志/流量分析、工具执行 agent 还没有实现，仍在设计文档后续路线中。
+
 ## 接入真实模型 API
 
 编辑 `config/models.yaml`，把 OpenAI-compatible 模型的 `enabled` 改为 `true`，并设置对应环境变量。
@@ -68,7 +81,28 @@ DeepSeek 示例：
     model_id: deepseek-v4-flash
     max_tokens: 4096
     temperature: 0.2
+    response_format: json_object
+    usd_per_1m_input_tokens: 0
+    usd_per_1m_output_tokens: 0
 ```
+
+GLM / 智谱示例：
+
+```yaml
+  - name: glm
+    enabled: true
+    provider: openai_compatible
+    base_url: https://open.bigmodel.cn/api/paas/v4
+    api_key_env: GLM_API_KEY
+    model_id: glm-5.2
+    max_tokens: 4096
+    temperature: 0.2
+    response_format: none
+    usd_per_1m_input_tokens: 0
+    usd_per_1m_output_tokens: 0
+```
+
+说明：平台会请求 `/chat/completions`，所以上面的 `base_url` 不需要包含 `/chat/completions`。`response_format: none` 表示不向该模型强制发送 JSON mode 参数，但 prompt 仍会要求模型只输出 JSON。
 
 通用 OpenAI-compatible 示例：
 
@@ -83,6 +117,42 @@ python runners/run_eval.py --models model_a --category audit
 $env:MODEL_A_API_KEY="your_api_key"
 python runners/run_eval.py --models model_a --category audit
 ```
+
+GLM 测试命令：
+
+```powershell
+$env:GLM_API_KEY="your_glm_api_key"
+python runners/run_eval.py --models glm --category audit --source-type public-vulnerable-app-adapted,cve-minimal-reproduction --run-id glm-public-v05
+python reports/generate_report.py --run-id glm-public-v05
+```
+
+DeepSeek 与 GLM 合并对比：
+
+```powershell
+$env:DEEPSEEK_API_KEY="your_deepseek_api_key"
+$env:GLM_API_KEY="your_glm_api_key"
+python runners/run_eval.py --models deepseek,glm --category audit --source-type public-vulnerable-app-adapted,cve-minimal-reproduction --run-id deepseek-vs-glm-v06
+python reports/generate_report.py --run-id deepseek-vs-glm-v06
+start E:\learn\model_test_exercise\results\reports\deepseek-vs-glm-v06.html
+```
+
+如果 DeepSeek 和 GLM 已经分开跑过，也可以把多个历史 run 合并成一份报告：
+
+```powershell
+python reports\generate_report.py --run-ids deepseek-public-v05,glm-public-v05 --output-id deepseek-vs-glm-merged
+start E:\learn\model_test_exercise\results\reports\deepseek-vs-glm-merged.html
+```
+
+生成报告索引页：
+
+```powershell
+python reports\generate_report.py --index
+start E:\learn\model_test_exercise\results\reports\index.html
+```
+
+## 模型原始输出语言
+
+原始输出由模型直接生成，保存在 `results/raw/<run_id>/<model>/<task_id>.json`。早期版本的 schema 示例和标准答案多为英文，所以模型容易跟随英文输出。当前 prompt 已明确要求：JSON key 保持英文，字符串 value 使用中文；漏洞名、CVE、payload、文件名、函数名等专业名词可保留英文。
 
 ## 常用命令
 
@@ -146,6 +216,7 @@ python reports/generate_report.py --run-id 20260625-153000
 - 评分 JSONL：`results/scored/<run_id>.jsonl`
 - Markdown 汇总报告：`results/reports/<run_id>.md`
 - HTML 图表报告：`results/reports/<run_id>.html`
+- 报告索引页：`results/reports/index.html`
 
 ## 内置题目来源
 
@@ -184,3 +255,28 @@ python reports/generate_report.py --run-id 20260625-153000
 1. 继续扩展到 10-20 道审计任务，加入多文件项目和多漏洞混合题。
 2. 为 hard 任务加入人工复核字段。
 3. 第二阶段加入 Docker 靶场、工具执行器和 CTF flag 评分。
+
+## 成本估算
+
+模型配置支持以下字段：
+
+```yaml
+usd_per_1m_input_tokens: 0
+usd_per_1m_output_tokens: 0
+```
+
+含义是每 100 万 input/output token 的美元价格。价格经常变化，平台不会内置厂商价格；你需要按当前账户和模型价格手动填写。未填写或为 0 时，报告中的成本为 0。
+
+成本会写入 `results/scored/<run_id>.jsonl` 每行的 `cost_usd` 字段。HTML/Markdown 报告会展示平均成本、总成本、按模型平均成本图表，报告索引页也会展示总成本。
+
+## 答案质量诊断
+
+平台会对审计模型输出做轻量诊断，结果写入 `answer_diagnosis` 字段。诊断内容包括：
+
+- 是否为合法 JSON
+- findings 数量
+- 是否缺少必填字段
+- 是否引用题目文件列表之外的文件
+- 是否引用标准答案之外的函数名
+
+诊断不直接改变分数，只用于报告中辅助解释模型输出质量。历史 run 没有该字段时，报告会显示“无数据”。
