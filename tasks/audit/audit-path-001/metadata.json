@@ -5,7 +5,11 @@
   "sub_category": "web",
   "difficulty": "easy",
   "language": "python",
-  "tags": ["path-traversal", "flask", "file-read"],
+  "tags": [
+    "path-traversal",
+    "flask",
+    "file-read"
+  ],
   "source": {
     "type": "synthetic",
     "origin": "platform-authored",
@@ -24,7 +28,13 @@
         "function": "download",
         "line_hint": 15,
         "root_cause": "the name query parameter is joined with the upload directory without checking that the resolved path stays inside the base directory",
-        "keywords": ["name", "join", "resolved path", "base directory", "../"],
+        "keywords": [
+          "name",
+          "join",
+          "resolved path",
+          "base directory",
+          "../"
+        ],
         "exploit_required": true
       }
     ],
@@ -45,5 +55,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "low"
   }
 }

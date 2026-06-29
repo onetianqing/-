@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>安全模型评测平台</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f9;
+      --panel: #ffffff;
+      --text: #182230;
+      --muted: #667085;
+      --line: #d7dee8;
+      --blue: #1f5fbf;
+      --blue-soft: #eaf1ff;
+      --green: #14745d;
+      --red: #b83232;
+      --amber: #9a5b00;
+      --shadow: 0 14px 34px rgba(24, 35, 52, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 74px;
+      padding: 14px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--blue);
+      font-weight: 800;
+    }
+    h1 { margin: 0; font-size: 20px; }
+    .subtitle { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .status { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+    .top-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(92px, 1fr));
+      gap: 10px;
+      min-width: 320px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+    .stat-value { font-size: 18px; font-weight: 800; line-height: 1.1; }
+    .stat-label { margin-top: 2px; color: var(--muted); font-size: 12px; }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(330px, 400px) minmax(0, 1fr);
+      gap: 18px;
+      padding: 18px 22px 28px;
+    }
+
+    section, .panel {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 15px;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 { margin: 0; font-size: 15px; }
+    h3 { margin: 0 0 10px; font-size: 14px; }
+    h4 { margin: 14px 0 8px; font-size: 13px; }
+    .body { padding: 15px; }
+    .left-stack, .right-stack { display: grid; gap: 18px; align-content: start; }
+
+    .field { margin-bottom: 13px; }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      background: #fff;
+      font: inherit;
+    }
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      accent-color: var(--blue);
+    }
+    .inline-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .checks {
+      display: grid;
+      gap: 8px;
+      max-height: 180px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcff;
+    }
+    .check-row {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      font-size: 13px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      color: #fff;
+      background: var(--muted);
+      white-space: nowrap;
+    }
+    .pill.ready { background: var(--green); }
+    .pill.missing { background: var(--amber); }
+    .pill.mock { background: var(--blue); }
+    .pill.synthetic { background: var(--amber); }
+    .pill.public { background: var(--green); }
+
+    .toolbar, .links, .tabs, .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .toolbar { margin-top: 15px; }
+    button {
+      min-height: 36px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.primary { background: var(--blue); color: #fff; }
+    button.primary:hover { background: #174f9f; }
+    button.secondary { background: var(--blue-soft); color: var(--blue); border-color: #c8d6ea; }
+    button.danger { background: #fff1f0; color: var(--red); border-color: #efc9c5; }
+    button.tab { background: #fff; color: var(--muted); border-color: var(--line); }
+    button.tab.active { color: #fff; background: var(--blue); border-color: var(--blue); }
+    button:disabled { cursor: not-allowed; opacity: 0.55; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 700; background: #fafbfc; }
+    .table-scroll {
+      overflow: auto;
+      max-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .title-cell { min-width: 220px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .empty { padding: 16px; color: var(--muted); font-size: 13px; }
+
+    .progress-panel {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .progress-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcff;
+    }
+    .progress-label { color: var(--muted); font-size: 12px; }
+    .progress-value {
+      margin-top: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 16px;
+      font-weight: 800;
+    }
+    .progress-track {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8edf5;
+      margin-bottom: 12px;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+      transition: width 180ms ease;
+    }
+    pre {
+      min-height: 220px;
+      max-height: 360px;
+      margin: 0;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      background: #101820;
+      color: #e6edf3;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    a { color: var(--blue); font-weight: 700; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .workspace-body { padding: 15px; }
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #fbfcff;
+    }
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 3px; font-size: 16px; }
+    .detail-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcff;
+      margin-top: 12px;
+    }
+    .result-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 10px;
+      background: #fff;
+    }
+    .result-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fafbfc;
+    }
+    .component-list {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .component {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px;
+      background: #fff;
+    }
+    .component span { display: block; color: var(--muted); font-size: 12px; }
+    .component strong { display: block; margin-top: 3px; }
+    .result-body { padding: 0 12px 12px; }
+    .raw-preview {
+      max-height: 180px;
+      min-height: 80px;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    .filter-select { max-width: 190px; }
+
+    @media (max-width: 1120px) {
+      main { grid-template-columns: 1fr; padding: 14px; }
+      header { align-items: flex-start; flex-direction: column; }
+      .top-stats, .progress-panel, .mini-grid, .component-list { width: 100%; grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">评</div>
+      <div>
+        <h1>安全模型评测平台</h1>
+        <div class="subtitle">评测配置、运行历史、题库管理与报告追踪</div>
+      </div>
+    </div>
+    <div class="top-stats">
+      <div class="stat"><div class="stat-value" id="modelStat">0</div><div class="stat-label">模型</div></div>
+      <div class="stat"><div class="stat-value" id="taskStat">0</div><div class="stat-label">任务</div></div>
+      <div class="stat"><div class="stat-value" id="runStat">0</div><div class="stat-label">Run</div></div>
+    </div>
+    <div class="status" id="status">正在加载平台状态</div>
+  </header>
+
+  <main>
+    <div class="left-stack">
+      <section>
+        <div class="section-head">
+          <h2>评测配置</h2>
+          <button class="secondary" id="refreshBtn" type="button">刷新</button>
+        </div>
+        <div class="body">
+          <div class="field">
+            <label>模型</label>
+            <div class="checks" id="modelsBox"></div>
+          </div>
+
+          <div class="inline-grid">
+            <div class="field">
+              <label for="category">测试类别</label>
+              <select id="category"></select>
+            </div>
+            <div class="field">
+              <label for="sourceType">题库来源</label>
+              <select id="sourceType"></select>
+            </div>
+          </div>
+
+          <div class="inline-grid">
+            <div class="field">
+              <label for="suiteFilter">题库套件</label>
+              <select id="suiteFilter"></select>
+            </div>
+            <div class="field">
+              <label for="capabilityFilter">能力桶</label>
+              <select id="capabilityFilter"></select>
+            </div>
+          </div>
+
+          <div class="inline-grid">
+            <div class="field">
+              <label for="difficultyFilter">难度</label>
+              <select id="difficultyFilter"></select>
+            </div>
+            <div class="field">
+              <label for="sampleSize">随机抽样题目量</label>
+              <input id="sampleSize" type="number" min="1" max="5000" placeholder="不填则不随机抽样">
+            </div>
+          </div>
+
+          <div class="inline-grid">
+            <div class="field">
+              <label for="repetitions">测试次数</label>
+              <input id="repetitions" type="number" min="1" max="20" value="1">
+            </div>
+            <div class="field">
+              <label for="maxTasks">最大任务数</label>
+              <input id="maxTasks" type="number" min="1" max="100" placeholder="不限制">
+            </div>
+          </div>
+
+          <div class="inline-grid">
+            <div class="field">
+              <label for="sampleSeed">抽样种子</label>
+              <input id="sampleSeed" type="text" value="2026">
+            </div>
+            <div class="field">
+              <label for="maxTokens">最大输出 token</label>
+              <input id="maxTokens" type="number" min="1" placeholder="默认 4096，可手动覆盖">
+            </div>
+            <div class="field">
+              <label for="runId">Run ID</label>
+              <input id="runId" type="text">
+            </div>
+          </div>
+
+          <div class="checks">
+            <label class="check-row">
+              <input id="preflight" type="checkbox" checked>
+              <span>运行前自检</span>
+              <span class="pill ready">建议</span>
+            </label>
+            <label class="check-row">
+              <input id="strict" type="checkbox">
+              <span>严格自检</span>
+              <span class="pill">warning 阻断</span>
+            </label>
+            <label class="check-row">
+              <input id="dryRun" type="checkbox">
+              <span>Dry run</span>
+              <span class="pill">不调 API</span>
+            </label>
+          </div>
+
+          <div class="toolbar">
+            <button class="secondary" id="planBtn" type="button">预览计划</button>
+            <button class="primary" id="runBtn" type="button">开始评测</button>
+            <button class="danger" id="clearBtn" type="button">清空日志</button>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>任务选择</h2>
+          <span class="muted" id="taskCount">0 个任务</span>
+        </div>
+        <div class="body">
+          <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
+            <label class="check-row" style="margin:0;">
+              <input id="selectAllTasks" type="checkbox">
+              <span>选择当前任务</span>
+              <span></span>
+            </label>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:42px;"></th>
+                  <th>任务</th>
+                  <th>难度</th>
+                  <th>来源</th>
+                </tr>
+              </thead>
+              <tbody id="tasksBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="right-stack">
+      <section>
+        <div class="section-head">
+          <h2>运行输出</h2>
+          <span class="muted" id="jobState">空闲</span>
+        </div>
+        <div class="body">
+          <div class="progress-panel">
+            <div class="progress-card"><div class="progress-label">完成进度</div><div class="progress-value" id="progressCount">0 / 0</div></div>
+            <div class="progress-card"><div class="progress-label">百分比</div><div class="progress-value" id="progressPercent">0%</div></div>
+            <div class="progress-card"><div class="progress-label">耗时</div><div class="progress-value" id="elapsedTime">0s</div></div>
+            <div class="progress-card"><div class="progress-label">当前步骤</div><div class="progress-value" id="currentStep">等待开始</div></div>
+          </div>
+          <div class="progress-track" aria-label="运行进度"><div class="progress-fill" id="progressFill"></div></div>
+          <pre id="output"></pre>
+          <div class="links" id="reportLinks"></div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>平台工作区</h2>
+          <div class="tabs">
+            <button class="tab active" id="runsTab" type="button">运行历史</button>
+            <button class="tab" id="catalogTab" type="button">题库管理</button>
+          </div>
+        </div>
+        <div class="workspace-body">
+          <div class="tab-view active" id="runsView">
+            <div class="toolbar" style="margin-top:0;margin-bottom:12px;">
+              <button class="secondary" id="refreshRunsBtn" type="button">刷新历史</button>
+              <button class="secondary" id="regenReportBtn" type="button" disabled>重新生成报告</button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Run ID</th>
+                    <th>模型</th>
+                    <th>类别</th>
+                    <th>任务/结果</th>
+                    <th>平均分</th>
+                    <th>加权分</th>
+                    <th>成功率</th>
+                    <th>报告</th>
+                  </tr>
+                </thead>
+                <tbody id="runsBody"></tbody>
+              </table>
+            </div>
+            <div id="runDetail" class="detail-box">
+              <span class="muted">点击一条 run 查看模型、任务、扣分项、raw 输出和响应元信息。</span>
+            </div>
+          </div>
+
+          <div class="tab-view" id="catalogView">
+            <div class="filters" style="margin-bottom:12px;">
+              <select id="catalogCategory" class="filter-select"></select>
+              <select id="catalogSource" class="filter-select"></select>
+              <select id="catalogDifficulty" class="filter-select"></select>
+            </div>
+            <div id="catalogSummary" class="mini-grid"></div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>任务</th>
+                    <th>类别</th>
+                    <th>难度</th>
+                    <th>能力桶/权重</th>
+                    <th>来源</th>
+                    <th>标签</th>
+                    <th>参考</th>
+                  </tr>
+                </thead>
+                <tbody id="catalogBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const state = {
+      models: [],
+      tasks: [],
+      categories: [],
+      sourceTypes: [],
+      reports: [],
+      runs: [],
+      selectedRun: null,
+      catalog: { categories: [], tasks: [] },
+      maxTokensByCategory: {},
+      defaultMaxTokens: 4096,
+      pollTimer: null
+    };
+
+    const el = (id) => document.getElementById(id);
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        headers: { "Content-Type": "application/json" },
+        ...options
+      });
+      const data = await response.json();
+      if (!response.ok || data.ok === false) {
+        throw new Error(data.error || "请求失败");
+      }
+      return data;
+    }
+
+    async function loadState() {
+      setStatus("正在加载平台状态");
+      const [platform, runs, catalog] = await Promise.all([
+        api("/api/state"),
+        api("/api/runs"),
+        api("/api/tasks/catalog")
+      ]);
+      state.models = platform.models || [];
+      state.tasks = platform.tasks || [];
+      state.categories = platform.categories || [];
+      state.sourceTypes = platform.source_types || [];
+      state.suites = platform.suites || [];
+      state.capabilities = platform.capabilities || [];
+      state.difficulties = platform.difficulties || [];
+      state.reports = platform.reports || [];
+      state.runs = runs.runs || [];
+      state.catalog = catalog || { categories: [], tasks: [] };
+      state.maxTokensByCategory = (platform.defaults && platform.defaults.max_tokens_by_category) || {};
+      state.defaultMaxTokens = (platform.defaults && platform.defaults.default_max_tokens) || 4096;
+      renderModels();
+      renderSelectors(platform.defaults || {});
+      renderTasks();
+      renderRuns();
+      renderCatalogFilters();
+      renderCatalog();
+      renderStats();
+      updateMaxTokenHint();
+      setStatus("就绪");
+    }
+
+    function renderStats() {
+      el("modelStat").textContent = state.models.length;
+      el("taskStat").textContent = state.tasks.length;
+      el("runStat").textContent = state.runs.length;
+    }
+
+    function renderModels() {
+      const box = el("modelsBox");
+      box.innerHTML = "";
+      state.models.forEach((model) => {
+        const label = document.createElement("label");
+        label.className = "check-row";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = model.name;
+        checkbox.checked = model.enabled && model.provider === "local_mock";
+        const name = document.createElement("span");
+        name.textContent = `${model.name} (${model.model_id || model.provider})`;
+        const pill = document.createElement("span");
+        pill.className = "pill " + (model.provider === "local_mock" ? "mock" : (model.api_key_ready ? "ready" : "missing"));
+        pill.textContent = model.provider === "local_mock" ? "mock" : (model.api_key_ready ? "key 已就绪" : model.api_key_env || "无 key");
+        label.append(checkbox, name, pill);
+        box.appendChild(label);
+      });
+    }
+
+    function renderSelectors(defaults) {
+      const category = el("category");
+      const previous = category.value || defaults.category || "";
+      category.innerHTML = "";
+      state.categories.forEach((item) => category.appendChild(new Option(item, item)));
+      category.value = state.categories.includes(previous) ? previous : (defaults.category || state.categories[0] || "");
+
+      const sourceType = el("sourceType");
+      const previousSource = sourceType.value || "all";
+      sourceType.innerHTML = "";
+      sourceType.appendChild(new Option("全部来源", "all"));
+      state.sourceTypes.forEach((item) => sourceType.appendChild(new Option(item, item)));
+      sourceType.value = [...sourceType.options].some((option) => option.value === previousSource) ? previousSource : "all";
+
+      fillFilter(el("suiteFilter"), "全部套件", filteredOptions("benchmark_suite"));
+      fillFilter(el("capabilityFilter"), "全部能力桶", filteredOptions("benchmark_capability"));
+      fillFilter(el("difficultyFilter"), "全部难度", filteredOptions("difficulty"));
+
+      if (!el("runId").value) {
+        el("runId").value = defaults.run_id || makeRunId();
+      }
+    }
+
+    function visibleTasks() {
+      const category = el("category").value;
+      const sourceType = el("sourceType").value;
+      const suite = el("suiteFilter").value;
+      const capability = el("capabilityFilter").value;
+      const difficulty = el("difficultyFilter").value;
+      return state.tasks.filter((task) => {
+        if (task.category !== category) return false;
+        if (sourceType !== "all" && task.source_type !== sourceType) return false;
+        if (suite !== "all" && task.benchmark_suite !== suite) return false;
+        if (capability !== "all" && task.benchmark_capability !== capability) return false;
+        if (difficulty !== "all" && task.difficulty !== difficulty) return false;
+        return true;
+      });
+    }
+
+    function filteredOptions(key) {
+      const category = el("category").value;
+      const sourceType = el("sourceType").value;
+      return unique(state.tasks.filter((task) => {
+        if (task.category !== category) return false;
+        if (sourceType !== "all" && task.source_type !== sourceType) return false;
+        return true;
+      }), key);
+    }
+
+    function renderTasks() {
+      const tasks = visibleTasks();
+      el("taskCount").textContent = `${tasks.length} 个任务`;
+      const body = el("tasksBody");
+      body.innerHTML = "";
+      if (!tasks.length) {
+        body.innerHTML = `<tr><td colspan="4" class="empty">当前筛选条件下没有任务</td></tr>`;
+        return;
+      }
+      tasks.forEach((task) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input type="checkbox" class="task-check" value="${escapeAttr(task.id)}"></td>
+          <td class="title-cell"><strong>${escapeHtml(task.id)}</strong><br><span class="muted">${escapeHtml(task.title || "")}</span></td>
+          <td>${escapeHtml(task.difficulty || "")}</td>
+          <td>${sourcePill(task.source_type)}<br><span class="muted">${escapeHtml(task.origin || "")}</span></td>
+        `;
+        body.appendChild(row);
+      });
+    }
+
+    function renderRuns() {
+      const body = el("runsBody");
+      body.innerHTML = "";
+      if (!state.runs.length) {
+        body.innerHTML = `<tr><td colspan="7" class="empty">暂无历史 run</td></tr>`;
+        return;
+      }
+      state.runs.forEach((run) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><button class="secondary" type="button" data-run="${escapeAttr(run.run_id)}">${escapeHtml(run.run_id)}</button><br><span class="muted">${escapeHtml(run.updated_at || "")}</span></td>
+          <td>${escapeHtml((run.models || []).join(", "))}</td>
+          <td>${escapeHtml((run.categories || []).join(", "))}</td>
+          <td>${run.task_count || 0} / ${run.count || 0}</td>
+          <td>${Number(run.avg_score || 0).toFixed(1)}</td>
+          <td>${Number(run.weighted_score || 0).toFixed(1)}</td>
+          <td>${formatPercent(run.success_rate)}</td>
+          <td>${reportLinks(run)}</td>
+        `;
+        row.querySelector("button").addEventListener("click", () => loadRunDetail(run.run_id));
+        body.appendChild(row);
+      });
+    }
+
+    async function loadRunDetail(runId) {
+      setStatus(`正在加载 ${runId}`);
+      const data = await api(`/api/runs/${encodeURIComponent(runId)}`);
+      state.selectedRun = data;
+      renderRunDetail(data);
+      el("regenReportBtn").disabled = false;
+      setStatus("就绪");
+    }
+
+    function renderRunDetail(data) {
+      const run = data.run || {};
+      const results = data.results || [];
+      const box = el("runDetail");
+      const metrics = `
+        <div class="mini-grid">
+          <div class="metric"><span>平均分</span><strong>${Number(run.avg_score || 0).toFixed(1)}</strong></div>
+          <div class="metric"><span>加权综合分</span><strong>${Number(run.weighted_score || 0).toFixed(1)}</strong></div>
+          <div class="metric"><span>成功率</span><strong>${formatPercent(run.success_rate)}</strong></div>
+          <div class="metric"><span>加权解出率</span><strong>${formatPercent(run.weighted_solve_rate)}</strong></div>
+          <div class="metric"><span>总 token</span><strong>${run.total_tokens || 0}</strong></div>
+          <div class="metric"><span>总成本</span><strong>${formatCost(run)}</strong></div>
+        </div>
+      `;
+      const cards = results.map(renderResultCard).join("");
+      box.innerHTML = `
+        <h3>${escapeHtml(run.run_id || "")}</h3>
+        <div class="links">${reportLinks(run)}<span class="muted">${escapeHtml(data.scored_path || "")}</span></div>
+        ${metrics}
+        ${cards || "<p class='empty'>没有结果明细</p>"}
+      `;
+    }
+
+    function renderResultCard(result) {
+      const components = (result.components || []).map((item) => `
+        <div class="component">
+          <span>${escapeHtml(item.label)}</span>
+          <strong>${Number(item.score || 0).toFixed(1)} / ${Number(item.max || 0).toFixed(1)}</strong>
+        </div>
+      `).join("");
+      const deductions = (result.deductions || []).length
+        ? `<ul>${result.deductions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+        : `<p class="muted">无明显扣分项。</p>`;
+      const metadata = result.response_metadata || {};
+      return `
+        <div class="result-card">
+          <div class="result-head">
+            <div><strong>${escapeHtml(result.model_display || result.model || "")}</strong><br><span class="muted">${escapeHtml(result.task_id || "")} · ${escapeHtml(result.task_title || "")}</span></div>
+            <div><strong>${Number(result.score || 0)}</strong> 分 · ${result.success ? "成功" : "未达标"}<br><span class="muted">${escapeHtml(result.benchmark_capability || "")} · 权重 ${Number(result.effective_weight || 0).toFixed(1)}</span></div>
+          </div>
+          <div class="component-list">${components}</div>
+          <div class="result-body">
+            <h4>扣分项</h4>
+            ${deductions}
+            <h4>Raw 与响应元信息</h4>
+            <p class="muted">raw：${escapeHtml(result.raw_path || "无")}</p>
+            <p class="muted">finish_reason：${escapeHtml(metadata.finish_reason || "无")}；content_length：${escapeHtml(metadata.content_length ?? "无")}；has_reasoning_content：${escapeHtml(metadata.has_reasoning_content ?? "无")}</p>
+            <pre class="raw-preview">${escapeHtml(result.raw_preview || "无 raw 预览")}</pre>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCatalogFilters() {
+      fillFilter(el("catalogCategory"), "全部类别", unique(state.catalog.tasks, "category"));
+      fillFilter(el("catalogSource"), "全部来源", unique(state.catalog.tasks, "source_type"));
+      fillFilter(el("catalogDifficulty"), "全部难度", unique(state.catalog.tasks, "difficulty"));
+    }
+
+    function renderCatalog() {
+      const tasks = filteredCatalogTasks();
+      const summary = el("catalogSummary");
+      const grouped = {};
+      tasks.forEach((task) => {
+        grouped[task.category || "unknown"] = (grouped[task.category || "unknown"] || 0) + 1;
+      });
+      summary.innerHTML = Object.entries(grouped).map(([category, count]) => `
+        <div class="metric"><span>${escapeHtml(category)}</span><strong>${count}</strong></div>
+      `).join("") || `<div class="metric"><span>任务</span><strong>0</strong></div>`;
+
+      const body = el("catalogBody");
+      body.innerHTML = "";
+      if (!tasks.length) {
+        body.innerHTML = `<tr><td colspan="7" class="empty">当前筛选条件下没有题目</td></tr>`;
+        return;
+      }
+      tasks.forEach((task) => {
+        const row = document.createElement("tr");
+        const url = task.reference_url ? `<a href="${escapeAttr(task.reference_url)}" target="_blank" rel="noreferrer">打开</a>` : `<span class="muted">无</span>`;
+        row.innerHTML = `
+          <td><strong>${escapeHtml(task.id)}</strong><br><span class="muted">${escapeHtml(task.title || "")}</span></td>
+          <td>${escapeHtml(task.category || "")}</td>
+          <td>${escapeHtml(task.difficulty || "")}</td>
+          <td>${escapeHtml(task.benchmark_capability || "")}<br><span class="muted">权重 ${Number(task.effective_weight || 0).toFixed(1)}</span></td>
+          <td>${sourcePill(task.source_type)}<br><span class="muted">${escapeHtml(task.origin || "")}</span></td>
+          <td>${escapeHtml((task.tags || []).join(", "))}</td>
+          <td>${url}</td>
+        `;
+        body.appendChild(row);
+      });
+    }
+
+    function filteredCatalogTasks() {
+      const category = el("catalogCategory").value;
+      const source = el("catalogSource").value;
+      const difficulty = el("catalogDifficulty").value;
+      return (state.catalog.tasks || []).filter((task) => {
+        if (category !== "all" && task.category !== category) return false;
+        if (source !== "all" && task.source_type !== source) return false;
+        if (difficulty !== "all" && task.difficulty !== difficulty) return false;
+        return true;
+      });
+    }
+
+    function fillFilter(select, allLabel, values) {
+      const previous = select.value || "all";
+      select.innerHTML = "";
+      select.appendChild(new Option(allLabel, "all"));
+      values.forEach((item) => select.appendChild(new Option(item, item)));
+      select.value = [...select.options].some((option) => option.value === previous) ? previous : "all";
+    }
+
+    function unique(items, key) {
+      return [...new Set((items || []).map((item) => item[key]).filter(Boolean))].sort();
+    }
+
+    function sourcePill(sourceType) {
+      const value = escapeHtml(sourceType || "unknown");
+      const klass = sourceType === "synthetic" ? "synthetic" : "public";
+      return `<span class="pill ${klass}">${value}</span>`;
+    }
+
+    function reportLinks(run) {
+      const links = [];
+      if (run.html) links.push(`<a href="${run.html}" target="_blank" rel="noreferrer">HTML</a>`);
+      if (run.md) links.push(`<a href="${run.md}" target="_blank" rel="noreferrer">Markdown</a>`);
+      return links.join(" ") || `<span class="muted">未生成</span>`;
+    }
+
+    async function regenerateReport() {
+      if (!state.selectedRun || !state.selectedRun.run) return;
+      const runId = state.selectedRun.run.run_id;
+      setStatus(`正在重新生成 ${runId} 报告`);
+      const data = await api("/api/report", {
+        method: "POST",
+        body: JSON.stringify({ run_id: runId })
+      });
+      writeOutput(data.output || "报告已重新生成");
+      await loadState();
+      await loadRunDetail(runId);
+    }
+
+    function collectPayload() {
+      const selectedModels = [...document.querySelectorAll("#modelsBox input:checked")].map((item) => item.value);
+      const selectedTasks = [...document.querySelectorAll(".task-check:checked")].map((item) => item.value);
+      const payload = {
+        models: selectedModels,
+        category: el("category").value,
+        source_type: el("sourceType").value,
+        suite: el("suiteFilter").value,
+        capability: el("capabilityFilter").value,
+        difficulty: el("difficultyFilter").value,
+        tasks: selectedTasks,
+        repetitions: Number(el("repetitions").value || 1),
+        run_id: el("runId").value.trim() || makeRunId(),
+        preflight: el("preflight").checked,
+        preflight_strict: el("strict").checked,
+        dry_run: el("dryRun").checked
+      };
+      if (el("maxTasks").value) payload.max_tasks = Number(el("maxTasks").value);
+      if (el("sampleSize").value) payload.sample_size = Number(el("sampleSize").value);
+      if (el("sampleSeed").value) payload.sample_seed = el("sampleSeed").value.trim();
+      if (el("maxTokens").value) payload.max_tokens = Number(el("maxTokens").value);
+      return payload;
+    }
+
+    async function previewPlan() {
+      setBusy(true);
+      clearLinks();
+      resetProgress("计划预览中");
+      try {
+        const data = await api("/api/plan", { method: "POST", body: JSON.stringify(collectPayload()) });
+        writeOutput(`${data.command}\n\n${data.output}`);
+        setJobState(data.ok ? "计划预览完成" : "计划预览失败");
+        resetProgress(data.ok ? "计划预览完成" : "计划预览失败");
+      } catch (error) {
+        writeOutput(error.message);
+        setJobState("计划预览失败");
+        resetProgress("计划预览失败");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    async function startRun() {
+      setBusy(true);
+      clearLinks();
+      try {
+        const data = await api("/api/run", { method: "POST", body: JSON.stringify(collectPayload()) });
+        writeOutput(`${data.command}\n\n任务已提交：${data.job_id}`);
+        setJobState("运行中");
+        renderProgress(data.progress || {});
+        pollJob(data.job_id);
+      } catch (error) {
+        writeOutput(error.message);
+        setJobState("提交失败");
+        setBusy(false);
+        resetProgress("提交失败");
+      }
+    }
+
+    async function pollJob(jobId) {
+      if (state.pollTimer) window.clearTimeout(state.pollTimer);
+      try {
+        const job = await api(`/api/jobs/${jobId}`);
+        writeOutput(`${job.command}\n\n${job.output || ""}`);
+        setJobState(statusText(job.status));
+        renderProgress(job.progress || {});
+        if (job.status === "completed" || job.status === "failed") {
+          setBusy(false);
+          renderJobLinks(job);
+          await loadState();
+          if (job.run_id) await loadRunDetail(job.run_id);
+          return;
+        }
+        state.pollTimer = window.setTimeout(() => pollJob(jobId), 1500);
+      } catch (error) {
+        writeOutput(error.message);
+        setJobState("轮询失败");
+        resetProgress("轮询失败");
+        setBusy(false);
+      }
+    }
+
+    function renderProgress(progress) {
+      const done = Number(progress.done || 0);
+      const total = Number(progress.total || 0);
+      const percent = Math.max(0, Math.min(100, Number(progress.percent || 0)));
+      el("progressCount").textContent = `${done} / ${total}`;
+      el("progressPercent").textContent = `${percent}%`;
+      el("elapsedTime").textContent = formatElapsed(Number(progress.elapsed_seconds || 0));
+      el("currentStep").textContent = progress.current || "等待开始";
+      el("progressFill").style.width = `${percent}%`;
+    }
+
+    function resetProgress(current) {
+      renderProgress({ done: 0, total: 0, percent: 0, elapsed_seconds: 0, current });
+    }
+
+    function updateMaxTokenHint() {
+      const category = el("category").value;
+      const value = state.maxTokensByCategory[category] || state.defaultMaxTokens || 4096;
+      el("maxTokens").placeholder = `默认 ${value}，可手动覆盖`;
+    }
+
+    function switchTab(name) {
+      const runsActive = name === "runs";
+      el("runsTab").classList.toggle("active", runsActive);
+      el("catalogTab").classList.toggle("active", !runsActive);
+      el("runsView").classList.toggle("active", runsActive);
+      el("catalogView").classList.toggle("active", !runsActive);
+    }
+
+    function renderJobLinks(job) {
+      const links = el("reportLinks");
+      links.innerHTML = "";
+      if (job.report_html) links.appendChild(makeLink("打开 HTML 报告", job.report_html));
+      if (job.report_md) links.appendChild(makeLink("打开 Markdown 报告", job.report_md));
+    }
+
+    function makeLink(text, href) {
+      const link = document.createElement("a");
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noreferrer";
+      link.textContent = text;
+      return link;
+    }
+
+    function makeRunId() {
+      const now = new Date();
+      const pad = (value) => String(value).padStart(2, "0");
+      return `ui-${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    }
+
+    function statusText(status) {
+      return { queued: "排队中", running: "运行中", completed: "已完成", failed: "失败" }[status] || status;
+    }
+
+    function formatElapsed(seconds) {
+      if (!seconds) return "0s";
+      const minutes = Math.floor(seconds / 60);
+      const remain = seconds % 60;
+      return minutes ? `${minutes}m ${remain}s` : `${remain}s`;
+    }
+
+    function formatPercent(value) {
+      return `${(Number(value || 0) * 100).toFixed(1)}%`;
+    }
+
+    function formatCost(run) {
+      const parts = [];
+      if (Number(run.total_cost_rmb || 0)) parts.push(`RMB ${Number(run.total_cost_rmb).toFixed(6)}`);
+      if (Number(run.total_cost_usd || 0)) parts.push(`$${Number(run.total_cost_usd).toFixed(6)}`);
+      return parts.join(" / ") || "0";
+    }
+
+    function setStatus(text) { el("status").textContent = text; }
+    function setJobState(text) { el("jobState").textContent = text; }
+    function writeOutput(text) { el("output").textContent = text || ""; }
+    function clearLinks() { el("reportLinks").innerHTML = ""; }
+    function setBusy(busy) {
+      el("planBtn").disabled = busy;
+      el("runBtn").disabled = busy;
+      el("refreshBtn").disabled = busy;
+      el("refreshRunsBtn").disabled = busy;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+
+    el("refreshBtn").addEventListener("click", loadState);
+    el("refreshRunsBtn").addEventListener("click", loadState);
+    el("regenReportBtn").addEventListener("click", regenerateReport);
+    el("planBtn").addEventListener("click", previewPlan);
+    el("runBtn").addEventListener("click", startRun);
+    el("runsTab").addEventListener("click", () => switchTab("runs"));
+    el("catalogTab").addEventListener("click", () => switchTab("catalog"));
+    el("clearBtn").addEventListener("click", () => {
+      writeOutput("");
+      clearLinks();
+      setJobState("空闲");
+      resetProgress("等待开始");
+    });
+    el("category").addEventListener("change", () => {
+      renderSelectors({});
+      renderTasks();
+      updateMaxTokenHint();
+    });
+    el("sourceType").addEventListener("change", () => {
+      renderSelectors({});
+      renderTasks();
+    });
+    ["suiteFilter", "capabilityFilter", "difficultyFilter"].forEach((id) => {
+      el(id).addEventListener("change", renderTasks);
+    });
+    el("selectAllTasks").addEventListener("change", (event) => {
+      document.querySelectorAll(".task-check").forEach((item) => {
+        item.checked = event.target.checked;
+      });
+    });
+    ["catalogCategory", "catalogSource", "catalogDifficulty"].forEach((id) => {
+      el(id).addEventListener("change", renderCatalog);
+    });
+
+    loadState().catch((error) => {
+      setStatus("加载失败");
+      writeOutput(error.message);
+      resetProgress("加载失败");
+    });
+  </script>
+</body>
+</html>

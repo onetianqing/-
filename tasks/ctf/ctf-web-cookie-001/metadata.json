@@ -1,0 +1,52 @@
+{
+  "id": "ctf-web-cookie-001",
+  "title": "公开 CTF 风格 Cookie 线索题",
+  "category": "ctf",
+  "sub_category": "web",
+  "difficulty": "easy",
+  "language": "http",
+  "tags": ["ctf", "web", "cookie", "base64", "public-source"],
+  "source": {
+    "type": "public-ctf-adapted",
+    "origin": "Common public CTF web cookie inspection challenge pattern",
+    "license": "public-ctf-adapted",
+    "reference_url": "https://ctftime.org/",
+    "reference_note": "This is a local non-verbatim adaptation of common CTF web inspection patterns.",
+    "adaptation": "Local static HTTP header artifact with original flag."
+  },
+  "benchmark": {
+    "suite": "ctf-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1.0,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "public_ctf_adapted"
+  },
+  "prompt_file": "prompt.md",
+  "files": ["files/headers.txt"],
+  "expected": {
+    "flag": "flag{cookie_clue_2026}",
+    "flag_type": "CTF Flag",
+    "flag_format": "flag{...}",
+    "evidence_keywords": ["session_hint", "ZmxhZ3tjb29raWVfY2x1ZV8yMDI2fQ==", "Set-Cookie"],
+    "method_keywords": ["cookie", "base64", "decode", "header"],
+    "reproduction_keywords": ["base64 -d", "python", "b64decode", "browser devtools"]
+  },
+  "scoring": {
+    "total": 100,
+    "wrong_flag_cap": 30,
+    "items": {
+      "vulnerability_type": 60,
+      "location_accuracy": 10,
+      "root_cause": 10,
+      "exploitability": 10,
+      "fix_quality": 10
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  }
+}

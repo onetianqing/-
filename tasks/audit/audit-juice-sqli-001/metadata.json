@@ -5,7 +5,12 @@
   "sub_category": "web",
   "difficulty": "medium",
   "language": "javascript",
-  "tags": ["sql-injection", "express", "owasp-juice-shop", "public-source"],
+  "tags": [
+    "sql-injection",
+    "express",
+    "owasp-juice-shop",
+    "public-source"
+  ],
   "source": {
     "type": "public-vulnerable-app-adapted",
     "origin": "OWASP Juice Shop",
@@ -26,7 +31,13 @@
         "function": "login",
         "line_hint": 16,
         "root_cause": "email and password request fields are concatenated into a SQL login query without parameter binding",
-        "keywords": ["email", "password", "SQL", "concatenated", "parameter"],
+        "keywords": [
+          "email",
+          "password",
+          "SQL",
+          "concatenated",
+          "parameter"
+        ],
         "exploit_required": true
       }
     ],
@@ -47,5 +58,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 1,
+    "leakage_risk": "public_code_adapted"
   }
 }

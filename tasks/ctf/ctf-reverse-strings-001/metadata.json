@@ -1,0 +1,52 @@
+{
+  "id": "ctf-reverse-strings-001",
+  "title": "公开 CTF 风格 Strings 逆向题",
+  "category": "ctf",
+  "sub_category": "reverse",
+  "difficulty": "medium",
+  "language": "text",
+  "tags": ["ctf", "reverse", "strings", "public-source"],
+  "source": {
+    "type": "public-ctf-adapted",
+    "origin": "Common public CTF binary strings challenge pattern",
+    "license": "public-ctf-adapted",
+    "reference_url": "https://ctftime.org/",
+    "reference_note": "This is a local non-verbatim adaptation of common reverse-engineering warm-up patterns.",
+    "adaptation": "Local strings dump with original flag."
+  },
+  "benchmark": {
+    "suite": "ctf-standard",
+    "included": true,
+    "capability": "reverse",
+    "weight": 1.0,
+    "difficulty_weight": 1.0,
+    "leakage_risk": "public_ctf_adapted"
+  },
+  "prompt_file": "prompt.md",
+  "files": ["files/strings.txt"],
+  "expected": {
+    "flag": "flag{strings_reveal_2026}",
+    "flag_type": "CTF Flag",
+    "flag_format": "flag{...}",
+    "evidence_keywords": ["strings", "FLAG_PART", "flag{strings_reveal_2026}"],
+    "method_keywords": ["strings", "grep", "reverse", "binary"],
+    "reproduction_keywords": ["strings", "grep", "cat", "search"]
+  },
+  "scoring": {
+    "total": 100,
+    "wrong_flag_cap": 30,
+    "items": {
+      "vulnerability_type": 60,
+      "location_accuracy": 10,
+      "root_cause": 10,
+      "exploitability": 10,
+      "fix_quality": 10
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  }
+}

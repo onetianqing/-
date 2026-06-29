@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "picoctf-reference",
+      "name": "picoCTF public reference",
+      "base_url": "https://picoctf.org/",
+      "seed_urls": ["https://picoctf.org/"],
+      "source_type": "public-ctf-adapted",
+      "default_category": "ctf",
+      "default_suite": "ctf-standard",
+      "allowed_use": "reference-and-local-adaptation",
+      "requires_login": false,
+      "license_note": "Use as public reference. Do not copy challenge text or artifacts unless license permits; prefer local non-verbatim adaptations.",
+      "enabled": true
+    },
+    {
+      "id": "ctftime-reference",
+      "name": "CTFtime public event/challenge references",
+      "base_url": "https://ctftime.org/",
+      "seed_urls": ["https://ctftime.org/"],
+      "source_type": "public-ctf-adapted",
+      "default_category": "ctf",
+      "default_suite": "ctf-standard",
+      "allowed_use": "metadata-reference-and-local-adaptation",
+      "requires_login": false,
+      "license_note": "Use public metadata and references; verify individual challenge/writeup license before copying content.",
+      "enabled": true
+    },
+    {
+      "id": "nvd-cve-reference",
+      "name": "NVD CVE public references",
+      "base_url": "https://nvd.nist.gov/",
+      "seed_urls": ["https://nvd.nist.gov/vuln"],
+      "source_type": "public-cve-adapted",
+      "default_category": "audit",
+      "default_suite": "audit-standard",
+      "allowed_use": "reference-and-minimal-local-reproduction",
+      "requires_login": false,
+      "license_note": "Use CVE metadata as reference and create local minimal reproductions; keep CVE URL and advisory references.",
+      "enabled": true
+    }
+  ]
+}

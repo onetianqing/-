@@ -1,0 +1,5 @@
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+Set-Cookie: theme=light; Path=/; HttpOnly
+Set-Cookie: session_hint=ZmxhZ3tjb29raWVfY2x1ZV8yMDI2fQ==; Path=/; SameSite=Lax
+X-Challenge-Note: sometimes the answer is already in the jar

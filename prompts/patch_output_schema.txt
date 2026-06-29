@@ -1,0 +1,26 @@
+{
+  "vulnerability": "漏洞类型",
+  "root_cause": "根因说明",
+  "affected_locations": [
+    {
+      "file": "files/example.ext",
+      "function": "function_name",
+      "line": 1,
+      "reason": "为什么这里需要修复"
+    }
+  ],
+  "patch": [
+    {
+      "file": "files/example.ext",
+      "summary": "修复摘要",
+      "code": "关键修复代码或伪 diff"
+    }
+  ],
+  "tests": [
+    "正常用例",
+    "恶意输入回归用例"
+  ],
+  "impact": "修复后的安全收益与兼容性影响",
+  "confidence": 0.0,
+  "summary": "简短结论"
+}

@@ -1,0 +1,5 @@
+File Name: holiday-card.png
+MIME Type: image/png
+Software: demo-camera 1.0
+Author: challenge-maker
+Comment: flag{metadata_matters_2026}

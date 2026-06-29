@@ -5,7 +5,11 @@
   "sub_category": "web",
   "difficulty": "medium",
   "language": "python",
-  "tags": ["command-injection", "flask", "subprocess"],
+  "tags": [
+    "command-injection",
+    "flask",
+    "subprocess"
+  ],
   "source": {
     "type": "synthetic",
     "origin": "platform-authored",
@@ -24,7 +28,13 @@
         "function": "ping",
         "line_hint": 14,
         "root_cause": "the host query parameter is concatenated into a shell command executed with shell=True",
-        "keywords": ["host", "shell=True", "subprocess", "command", "concatenated"],
+        "keywords": [
+          "host",
+          "shell=True",
+          "subprocess",
+          "command",
+          "concatenated"
+        ],
         "exploit_required": true
       }
     ],
@@ -45,5 +55,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 1,
+    "leakage_risk": "low"
   }
 }

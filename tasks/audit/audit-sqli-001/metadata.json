@@ -5,7 +5,11 @@
   "sub_category": "web",
   "difficulty": "easy",
   "language": "python",
-  "tags": ["sql-injection", "flask", "auth"],
+  "tags": [
+    "sql-injection",
+    "flask",
+    "auth"
+  ],
   "source": {
     "type": "synthetic",
     "origin": "platform-authored",
@@ -44,5 +48,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "low"
   }
 }

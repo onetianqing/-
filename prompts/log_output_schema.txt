@@ -1,0 +1,15 @@
+{
+  "attack_type": "攻击类型或安全事件类型，例如 Log4Shell JNDI Injection",
+  "evidence": [
+    "用中文列出关键证据；IP、URL、payload、CVE、文件名等可保留原文"
+  ],
+  "timeline": [
+    "用中文描述事件时间线"
+  ],
+  "impact": "用中文说明影响范围、利用条件或风险",
+  "remediation": [
+    "用中文给出处置、修复、加固和后续排查建议"
+  ],
+  "confidence": 0.9,
+  "summary": "用中文总结"
+}

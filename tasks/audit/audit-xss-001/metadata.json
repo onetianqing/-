@@ -5,7 +5,11 @@
   "sub_category": "web",
   "difficulty": "easy",
   "language": "javascript",
-  "tags": ["xss", "express", "template"],
+  "tags": [
+    "xss",
+    "express",
+    "template"
+  ],
   "source": {
     "type": "synthetic",
     "origin": "platform-authored",
@@ -24,7 +28,12 @@
         "function": "search",
         "line_hint": 12,
         "root_cause": "the q query parameter is interpolated directly into an HTML response without escaping",
-        "keywords": ["query parameter", "html", "without escaping", "q"],
+        "keywords": [
+          "query parameter",
+          "html",
+          "without escaping",
+          "q"
+        ],
         "exploit_required": true
       }
     ],
@@ -45,5 +54,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "low"
   }
 }

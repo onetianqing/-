@@ -1,0 +1,31 @@
+{
+  "objective": "本次工具使用目标",
+  "tool_plan": [
+    {
+      "step": 1,
+      "tool": "授权工具名",
+      "input": {
+        "query": "工具输入参数"
+      },
+      "purpose": "为什么需要这一步",
+      "expected_observation": "预期能验证或排除什么"
+    }
+  ],
+  "final_answer": {
+    "conclusion": "最终安全判断",
+    "evidence": [
+      "关键证据 1",
+      "关键证据 2"
+    ],
+    "recommended_actions": [
+      "处置建议 1",
+      "处置建议 2"
+    ],
+    "uncertainty": "仍需人工确认的内容"
+  },
+  "safety_notes": [
+    "说明如何避免越权、扫描、利用或任意命令执行"
+  ],
+  "confidence": 0.0,
+  "summary": "简短结论"
+}

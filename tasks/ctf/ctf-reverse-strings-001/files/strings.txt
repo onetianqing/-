@@ -1,0 +1,5 @@
+init_runtime
+usage: ./warmup --check
+debug_mode=false
+FLAG_PART=flag{strings_reveal_2026}
+checksum_ok

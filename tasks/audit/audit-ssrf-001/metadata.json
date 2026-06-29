@@ -5,7 +5,11 @@
   "sub_category": "web",
   "difficulty": "medium",
   "language": "python",
-  "tags": ["ssrf", "flask", "requests"],
+  "tags": [
+    "ssrf",
+    "flask",
+    "requests"
+  ],
   "source": {
     "type": "synthetic",
     "origin": "platform-authored",
@@ -24,7 +28,13 @@
         "function": "fetch_url",
         "line_hint": 18,
         "root_cause": "the url query parameter is fetched by the server without validating scheme, host, or private IP ranges",
-        "keywords": ["url", "requests.get", "host", "private ip", "validation"],
+        "keywords": [
+          "url",
+          "requests.get",
+          "host",
+          "private ip",
+          "validation"
+        ],
         "exploit_required": true
       }
     ],
@@ -45,5 +55,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 1,
+    "leakage_risk": "low"
   }
 }

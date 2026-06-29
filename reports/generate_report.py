@@ -10,13 +10,26 @@ from statistics import mean, stdev
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from runners.benchmark import (
+    benchmark_score,
+    benchmark_solve_rate,
+    capability_stats,
+    difficulty_stats,
+    enrich_row as enrich_benchmark_row,
+    total_effective_weight,
+)
+from runners.config_loader import load_yaml
+from runners.task_index import load_task_metadata_map
 
 COMPONENTS = [
-    ("vulnerability_type", "漏洞类型", 20, "#2a7f62"),
-    ("location_accuracy", "定位准确性", 20, "#3f6fb5"),
-    ("root_cause", "根因解释", 20, "#b7791f"),
-    ("exploitability", "复现方式", 25, "#8a5fbf"),
-    ("fix_quality", "修复建议", 15, "#c55353"),
+    ("vulnerability_type", "类型判断", 20, "#2a7f62"),
+    ("location_accuracy", "关键证据/定位", 20, "#3f6fb5"),
+    ("root_cause", "根因/时间线", 20, "#b7791f"),
+    ("exploitability", "复现/影响判断", 25, "#8a5fbf"),
+    ("fix_quality", "修复/处置建议", 15, "#c55353"),
 ]
 
 MODEL_COLORS = [
@@ -31,11 +44,21 @@ MODEL_COLORS = [
 ]
 
 DEDUCTION_REASONS = {
-    "vulnerability_type": "漏洞类型没有完全匹配标准答案或缺少常见别名。",
-    "location_accuracy": "文件、函数或行号定位不够准确。",
-    "root_cause": "根因关键词覆盖不足，解释没有命中关键数据流或危险调用。",
-    "exploitability": "复现方式、payload 或本地验证步骤不够明确。",
-    "fix_quality": "修复建议缺少关键措施，或没有直接阻断漏洞成因。",
+    "vulnerability_type": "没有准确识别任务要求的攻击/风险类型，或缺少关键别名。",
+    "location_accuracy": "关键证据、位置、文件、函数、IP、时间戳或日志字段覆盖不足。",
+    "root_cause": "根因、攻击链或事件时间线解释不完整，缺少关键数据流或行为连接。",
+    "exploitability": "复现路径、利用条件、影响范围或事件后果说明不够明确。",
+    "fix_quality": "修复、加固或应急处置建议缺少关键措施，难以直接阻断风险。",
+}
+
+CATEGORY_COMPONENT_LABELS = {
+    "tool_use": {
+        "vulnerability_type": "工具选择",
+        "location_accuracy": "参数准确",
+        "root_cause": "步骤顺序",
+        "exploitability": "证据结论",
+        "fix_quality": "安全边界",
+    }
 }
 
 
@@ -133,7 +156,8 @@ def generate_index() -> Path:
 
 
 def index_entry(run_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
-    models = sorted({str(row.get("model")) for row in rows})
+    rows = enrich_rows(rows)
+    models = sorted({str(row.get("model_display") or row.get("model")) for row in rows})
     tasks = sorted({str(row.get("task_id")) for row in rows})
     html_path = PROJECT_ROOT / "results" / "reports" / f"{run_id}.html"
     md_path = PROJECT_ROOT / "results" / "reports" / f"{run_id}.md"
@@ -143,8 +167,11 @@ def index_entry(run_id: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
         "models": models,
         "tasks": tasks,
         "avg_score": mean(score_values(rows)) if rows else 0.0,
+        "weighted_score": benchmark_score(rows),
         "success_rate": rate(row.get("success") for row in rows),
-        "total_cost_usd": sum(cost_values(rows)),
+        "weighted_solve_rate": benchmark_solve_rate(rows),
+        "total_cost_usd": sum(cost_values(rows, "usd")),
+        "total_cost_rmb": sum(cost_values(rows, "rmb")),
         "has_html": html_path.exists(),
         "has_md": md_path.exists(),
     }
@@ -163,14 +190,16 @@ def build_index_html(entries: list[dict[str, Any]]) -> str:
             f"<td>{len(entry['tasks'])}</td>"
             f"<td>{entry['count']}</td>"
             f"<td>{entry['avg_score']:.1f}</td>"
+            f"<td>{entry['weighted_score']:.1f}</td>"
             f"<td>{entry['success_rate']:.1%}</td>"
-            f"<td>${entry['total_cost_usd']:.6f}</td>"
+            f"<td>{entry['weighted_solve_rate']:.1%}</td>"
+            f"<td>{format_dual_cost(entry['total_cost_rmb'], entry['total_cost_usd'])}</td>"
             f"<td>{html_link} {md_link}</td>"
             "</tr>"
         )
     table = (
-        "<table><tr><th>Run</th><th>模型</th><th>任务数</th><th>结果数</th>"
-        "<th>平均分</th><th>成功率</th><th>总成本</th><th>报告</th></tr>"
+        '<table><tr><th>Run</th><th>模型</th><th>任务数</th><th>结果数</th>'
+        '<th>平均分</th><th>加权综合分</th><th>成功率</th><th>加权解出率</th><th>总成本</th><th>报告</th></tr>'
         + "".join(rows)
         + "</table>"
     )
@@ -232,11 +261,16 @@ def build_index_html(entries: list[dict[str, Any]]) -> str:
 
 def enrich_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     metadata = load_task_metadata()
+    model_metadata = load_model_metadata()
     enriched: list[dict[str, Any]] = []
     for row in rows:
         copy = dict(row)
         task_meta = metadata.get(str(copy.get("task_id")), {})
         source = task_meta.get("source", {})
+        model_name = str(copy.get("model") or "unknown")
+        model_meta = model_metadata.get(model_name, {})
+        copy.setdefault("model_id", model_meta.get("model_id", ""))
+        copy["model_display"] = model_display_name(copy)
         copy.setdefault("task_title", task_meta.get("title"))
         copy.setdefault("difficulty", task_meta.get("difficulty"))
         copy.setdefault("language", task_meta.get("language"))
@@ -247,22 +281,43 @@ def enrich_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         copy.setdefault("task_reference_url", source.get("reference_url", ""))
         copy.setdefault("task_source_adaptation", source.get("adaptation", ""))
         copy.setdefault("scoring_items", task_meta.get("scoring", {}).get("items", default_scoring_items()))
+        copy = enrich_benchmark_row(copy, task_meta)
         if "expected_vuln_types" not in copy:
-            vulns = task_meta.get("expected", {}).get("vulnerabilities", [])
+            expected = task_meta.get("expected", {})
+            vulns = expected.get("vulnerabilities", []) if isinstance(expected, dict) else []
             copy["expected_vuln_types"] = [vuln.get("type", "unknown") for vuln in vulns]
+            if not copy["expected_vuln_types"] and isinstance(expected, dict):
+                copy["expected_vuln_types"] = [
+                    expected.get("attack_type")
+                    or expected.get("vulnerability_type")
+                    or expected.get("flag_type")
+                    or expected.get("tool_goal", "unknown")
+                ]
         enriched.append(copy)
     return enriched
 
 
+def load_model_metadata() -> dict[str, dict[str, Any]]:
+    try:
+        config = load_yaml(PROJECT_ROOT / "config" / "models.yaml")
+    except OSError:
+        return {}
+    models = config.get("models", [])
+    if not isinstance(models, list):
+        return {}
+    return {str(model.get("name")): model for model in models if model.get("name")}
+
+
+def model_display_name(row: dict[str, Any]) -> str:
+    name = str(row.get("model") or "unknown")
+    model_id = str(row.get("model_id") or "")
+    if model_id and model_id != name:
+        return f"{name} / {model_id}"
+    return name
+
+
 def load_task_metadata() -> dict[str, dict[str, Any]]:
-    metadata: dict[str, dict[str, Any]] = {}
-    for path in (PROJECT_ROOT / "tasks").glob("*/*/metadata.json"):
-        try:
-            item = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        metadata[str(item.get("id"))] = item
-    return metadata
+    return load_task_metadata_map(PROJECT_ROOT)
 
 
 def build_markdown_report(report_id: str, rows: list[dict[str, Any]], run_ids: list[str] | None = None) -> str:
@@ -279,21 +334,26 @@ def build_markdown_report(report_id: str, rows: list[dict[str, Any]], run_ids: l
             f"- 包含 run：{', '.join(run_ids)}",
             f"- 结果总数：{len(rows)}",
             f"- 平均分：{mean(score_values(rows)):.1f}",
+            f"- 加权综合分：{benchmark_score(rows):.1f}",
             f"- 成功率：{rate(row['success'] for row in rows):.1%}",
+            f"- 加权解出率：{benchmark_solve_rate(rows):.1%}",
             f"- 平均延迟：{mean(float(row.get('latency_ms', 0)) for row in rows):.0f} ms",
             f"- 平均 token 数：{mean(total_tokens(row) for row in rows):.0f}",
-            f"- 平均成本：${mean(cost_values(rows)):.6f}",
-            f"- 总成本：${sum(cost_values(rows)):.6f}",
+            f"- 平均成本：{format_dual_cost(mean(cost_values(rows, 'rmb')), mean(cost_values(rows, 'usd')))}",
+            f"- 总成本：{format_dual_cost(sum(cost_values(rows, 'rmb')), sum(cost_values(rows, 'usd')))}",
             "",
             f"HTML 图表报告：`{report_id}.html`",
             "",
         ]
     )
-    lines.extend(render_group_table("按模型汇总", rows, "model"))
+    lines.extend(render_group_table("按模型汇总", rows, "model_display"))
+    lines.extend(render_weighted_group_table("按模型加权榜单", rows, "model_display"))
     lines.extend(render_markdown_diagnosis_summary(rows))
     if len(run_ids) > 1:
         lines.extend(render_group_table("按 Run 汇总", rows, "run_id"))
     lines.extend(render_group_table("按漏洞类型汇总", expand_by_vuln_type(rows), "vulnerability_type"))
+    lines.extend(render_stat_table("按能力桶加权汇总", capability_stats(rows)))
+    lines.extend(render_stat_table("按难度加权汇总", difficulty_stats(rows)))
     lines.extend(render_source_table(rows))
     lines.extend(render_markdown_task_details(rows))
     return "\n".join(lines) + "\n"
@@ -313,8 +373,45 @@ def render_group_table(title: str, rows: list[dict[str, Any]], key: str) -> list
             f"{rate(row['success'] for row in group):.1%} | "
             f"{mean(float(row.get('latency_ms', 0)) for row in group):.0f} | "
             f"{mean(total_tokens(row) for row in group):.0f} | "
-            f"${mean(cost_values(group)):.6f} | "
-            f"${sum(cost_values(group)):.6f} |"
+            f"{format_dual_cost(mean(cost_values(group, 'rmb')), mean(cost_values(group, 'usd')))} | "
+            f"{format_dual_cost(sum(cost_values(group, 'rmb')), sum(cost_values(group, 'usd')))} |"
+        )
+    lines.append("")
+    return lines
+
+
+def render_weighted_group_table(title: str, rows: list[dict[str, Any]], key: str) -> list[str]:
+    grouped = group_by(rows, key)
+    lines = [
+        f"## {title}",
+        "",
+        "| 名称 | 结果数 | 题目权重 | 加权综合分 | 加权解出率 | 原平均分 | 原成功率 |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    stats = []
+    for name, group in grouped.items():
+        stats.append((name, group, benchmark_score(group)))
+    for name, group, weighted in sorted(stats, key=lambda item: (-item[2], str(item[0]))):
+        lines.append(
+            f"| {name} | {len(group)} | {total_effective_weight(group):.1f} | {weighted:.1f} | "
+            f"{benchmark_solve_rate(group):.1%} | {mean(score_values(group)):.1f} | "
+            f"{rate(row['success'] for row in group):.1%} |"
+        )
+    lines.append("")
+    return lines
+
+
+def render_stat_table(title: str, stats: list[dict[str, Any]]) -> list[str]:
+    lines = [
+        f"## {title}",
+        "",
+        "| 名称 | 结果数 | 题目权重 | 加权分 | 加权解出率 |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for item in stats:
+        lines.append(
+            f"| {item['name']} | {item['count']} | {float(item.get('total_weight', 0)):.1f} | "
+            f"{float(item.get('weighted_score', 0)):.1f} | {float(item.get('weighted_solve_rate', 0)):.1f}% |"
         )
     lines.append("")
     return lines
@@ -348,7 +445,7 @@ def render_markdown_diagnosis_summary(rows: list[dict[str, Any]]) -> list[str]:
         "| 模型 | 结果数 | 合法 JSON | 平均 finding 数 | 平均问题数 | 常见问题 |",
         "|---|---:|---:|---:|---:|---|",
     ]
-    for model, group in sorted(group_by(rows, "model").items()):
+    for model, group in sorted(group_by(rows, "model_display").items()):
         valid_values = [
             (row.get("answer_diagnosis") or {}).get("valid_json")
             for row in group
@@ -365,7 +462,7 @@ def render_markdown_diagnosis_summary(rows: list[dict[str, Any]]) -> list[str]:
 
 def render_markdown_task_details(rows: list[dict[str, Any]]) -> list[str]:
     lines = ["## 模型任务明细", ""]
-    for model, model_rows in sorted(group_by(rows, "model").items()):
+    for model, model_rows in sorted(group_by(rows, "model_display").items()):
         lines.extend([f"### {model}", ""])
         lines.extend(
             [
@@ -388,11 +485,12 @@ def build_html_report(report_id: str, rows: list[dict[str, Any]], run_ids: list[
         body = "<p>没有找到结果。</p>"
     else:
         run_ids = run_ids or sorted({str(row.get("run_id")) for row in rows})
-        model_stats = summarize_group(rows, "model")
+        model_stats = summarize_group(rows, "model_display")
         sections = [
             render_kpis(rows, run_ids),
             section("答案质量概览", render_diagnosis_summary(rows)),
             section("按模型平均分", render_model_score_chart(model_stats)),
+            section("按模型加权综合分", render_bar_chart(model_stats, "weighted_score", suffix="")),
             section("按模型分数组成", render_component_chart(rows)),
             section("按模型平均成本", render_cost_chart(model_stats)),
         ]
@@ -401,6 +499,8 @@ def build_html_report(report_id: str, rows: list[dict[str, Any]], run_ids: list[
         sections.extend(
             [
                 section("按漏洞类型成功率", render_bar_chart(summarize_group(expand_by_vuln_type(rows), "vulnerability_type"), "success_rate", suffix="%")),
+                section("按能力桶加权分", render_bar_chart(capability_stats(rows), "weighted_score", suffix="")),
+                section("按难度加权分", render_bar_chart(difficulty_stats(rows), "weighted_score", suffix="")),
                 section("题目来源", render_source_html_table(rows)),
                 section("模型任务明细", render_model_details(rows)),
             ]
@@ -577,11 +677,13 @@ def render_kpis(rows: list[dict[str, Any]], run_ids: list[str]) -> str:
         ("Run 数", str(len(run_ids))),
         ("结果总数", str(len(rows))),
         ("平均分", f"{mean(score_values(rows)):.1f}"),
+        ("加权综合分", f"{benchmark_score(rows):.1f}"),
         ("成功率", f"{rate(row['success'] for row in rows):.1%}"),
+        ("加权解出率", f"{benchmark_solve_rate(rows):.1%}"),
         ("平均延迟", f"{mean(float(row.get('latency_ms', 0)) for row in rows):.0f} ms"),
         ("平均 token", f"{mean(total_tokens(row) for row in rows):.0f}"),
-        ("平均成本", f"${mean(cost_values(rows)):.6f}"),
-        ("总成本", f"${sum(cost_values(rows)):.6f}"),
+        ("平均成本", format_dual_cost(mean(cost_values(rows, "rmb")), mean(cost_values(rows, "usd")))),
+        ("总成本", format_dual_cost(sum(cost_values(rows, "rmb")), sum(cost_values(rows, "usd")))),
     ]
     items = "\n".join(f"<div class=\"kpi\"><span>{label}</span><strong>{value}</strong></div>" for label, value in values)
     return f"<div class=\"kpis\">{items}</div>"
@@ -625,7 +727,13 @@ def render_model_score_chart(stats: list[dict[str, Any]]) -> str:
 
 
 def render_cost_chart(stats: list[dict[str, Any]]) -> str:
-    if not any(float(item.get("avg_cost_usd", 0)) > 0 for item in stats):
+    if any(float(item.get("avg_cost_rmb", 0)) > 0 for item in stats):
+        metric = "avg_cost_rmb"
+        value_format = "¥{:.6f}"
+    elif any(float(item.get("avg_cost_usd", 0)) > 0 for item in stats):
+        metric = "avg_cost_usd"
+        value_format = "${:.6f}"
+    else:
         return "<p>当前结果没有成本数据。请在 models.yaml 中配置 token 单价，并重新运行评测。</p>"
     colored = []
     color_map = model_color_map([str(item["name"]) for item in stats])
@@ -633,7 +741,7 @@ def render_cost_chart(stats: list[dict[str, Any]]) -> str:
         copy = dict(item)
         copy["color"] = color_map[str(item["name"])]
         colored.append(copy)
-    return render_bar_chart(colored, "avg_cost_usd", suffix="", use_item_color=True, value_format="${:.6f}")
+    return render_bar_chart(colored, metric, suffix="", use_item_color=True, value_format=value_format)
 
 
 def render_bar_chart(
@@ -650,7 +758,7 @@ def render_bar_chart(
     row_height = 34
     chart_width = width - label_width - 90
     height = 34 + row_height * len(stats)
-    max_value = 100.0 if metric in {"avg_score", "success_rate"} else max(float(item[metric]) for item in stats) or 1.0
+    max_value = 100.0 if metric in {"avg_score", "success_rate", "weighted_score", "weighted_solve_rate"} else max(float(item[metric]) for item in stats) or 1.0
     rows = []
     for index, item in enumerate(stats):
         y = 24 + index * row_height
@@ -710,7 +818,7 @@ def render_component_legend() -> str:
 
 
 def render_model_details(rows: list[dict[str, Any]]) -> str:
-    grouped = group_by(rows, "model")
+    grouped = group_by(rows, "model_display")
     color_map = model_color_map(sorted(grouped))
     cards = []
     for model, model_rows in sorted(grouped.items()):
@@ -723,7 +831,7 @@ def render_model_card(model: str, rows: list[dict[str, Any]], color: str) -> str
     success = rate(row["success"] for row in rows)
     latency = mean(float(row.get("latency_ms", 0)) for row in rows)
     tokens = mean(total_tokens(row) for row in rows)
-    cost = sum(cost_values(rows))
+    cost_text = format_dual_cost(sum(cost_values(rows, "rmb")), sum(cost_values(rows, "usd")))
     task_blocks = []
     for task_id, task_rows in sorted(group_by(rows, "task_id").items()):
         task_blocks.append(render_task_block(task_id, task_rows))
@@ -740,7 +848,7 @@ def render_model_card(model: str, rows: list[dict[str, Any]], color: str) -> str
     """
     return (
         f"<details class=\"model-card\" open>{summary}<p>平均 token：{tokens:.0f} | "
-        f"总成本：${cost:.6f}</p>{''.join(task_blocks)}</details>"
+        f"总成本：{cost_text}</p>{''.join(task_blocks)}</details>"
     )
 
 
@@ -774,6 +882,7 @@ def render_component_table(row: dict[str, Any], components: dict[str, float]) ->
     header = "<tr><th>评分项</th><th>得分</th><th>满分</th><th>状态</th></tr>"
     body = []
     for key, label, _default_max, _color in COMPONENTS:
+        label = component_label(row, key, label)
         max_points = component_max(row, key)
         value = components[key]
         lost = max_points - value
@@ -818,11 +927,15 @@ def summarize_group(rows: list[dict[str, Any]], key: str) -> list[dict[str, Any]
                 "name": name,
                 "count": len(group),
                 "avg_score": mean(score_values(group)),
+                "weighted_score": benchmark_score(group),
                 "success_rate": rate(row["success"] for row in group) * 100,
+                "weighted_solve_rate": benchmark_solve_rate(group) * 100,
                 "avg_latency_ms": mean(float(row.get("latency_ms", 0)) for row in group),
                 "avg_tokens": mean(total_tokens(row) for row in group),
-                "avg_cost_usd": mean(cost_values(group)),
-                "total_cost_usd": sum(cost_values(group)),
+                "avg_cost_usd": mean(cost_values(group, "usd")),
+                "total_cost_usd": sum(cost_values(group, "usd")),
+                "avg_cost_rmb": mean(cost_values(group, "rmb")),
+                "total_cost_rmb": sum(cost_values(group, "rmb")),
             }
         )
     return sorted(stats, key=lambda item: (-float(item["avg_score"]), str(item["name"])))
@@ -897,6 +1010,7 @@ def deduction_reasons(row: dict[str, Any]) -> list[str]:
         reasons.append("JSON 解析失败或输出不符合要求，已扣格式分。")
     scores = component_scores(row)
     for key, label, _default_max, _color in COMPONENTS:
+        label = component_label(row, key, label)
         max_points = component_max(row, key)
         lost = max_points - scores[key]
         if lost > 0.01:
@@ -904,6 +1018,11 @@ def deduction_reasons(row: dict[str, Any]) -> list[str]:
     if not reasons and float(row.get("score", 0)) < 100:
         reasons.append("总分未满，但评分器未返回更细的扣分来源。")
     return reasons
+
+
+def component_label(row: dict[str, Any], key: str, default: str) -> str:
+    labels = CATEGORY_COMPONENT_LABELS.get(str(row.get("category") or ""), {})
+    return labels.get(key, default)
 
 
 def component_max(row: dict[str, Any], key: str) -> float:
@@ -957,14 +1076,24 @@ def total_tokens(row: dict[str, Any]) -> float:
         return 0.0
 
 
-def cost_values(rows: list[dict[str, Any]]) -> list[float]:
+def cost_values(rows: list[dict[str, Any]], currency: str = "usd") -> list[float]:
     values = []
+    field = f"cost_{currency}"
     for row in rows:
         try:
-            values.append(float(row.get("cost_usd", 0) or 0))
+            values.append(float(row.get(field, 0) or 0))
         except (TypeError, ValueError):
             values.append(0.0)
     return values
+
+
+def format_dual_cost(rmb: float, usd: float) -> str:
+    parts = []
+    if rmb:
+        parts.append(f"¥{rmb:.6f}")
+    if usd:
+        parts.append(f"${usd:.6f}")
+    return " / ".join(parts) if parts else "0"
 
 
 def rate(values: Any) -> float:

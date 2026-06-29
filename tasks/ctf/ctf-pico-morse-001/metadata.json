@@ -1,0 +1,53 @@
+{
+  "id": "ctf-pico-morse-001",
+  "title": "picoCTF 风格 Morse 解码题",
+  "category": "ctf",
+  "sub_category": "crypto",
+  "difficulty": "medium",
+  "language": "text",
+  "tags": ["ctf", "crypto", "morse", "picoctf-style", "public-source"],
+  "source": {
+    "type": "public-ctf-adapted",
+    "origin": "picoCTF Cryptography / Morse warm-up style challenge",
+    "license": "public-ctf-adapted",
+    "reference_url": "https://picoctf.org/",
+    "reference_note": "This is a local non-verbatim adaptation of common public CTF Morse patterns.",
+    "adaptation": "Local Morse decoding task with original message."
+  },
+  "benchmark": {
+    "suite": "ctf-standard",
+    "included": true,
+    "capability": "crypto",
+    "weight": 1.0,
+    "difficulty_weight": 1.0,
+    "leakage_risk": "public_ctf_adapted"
+  },
+  "prompt_file": "prompt.md",
+  "files": ["files/artifact.txt"],
+  "expected": {
+    "flag": "flag{MORSE_SIGNAL_2026}",
+    "accepted_flags": ["flag{morse_signal_2026}"],
+    "flag_type": "CTF Flag",
+    "flag_format": "flag{...}",
+    "evidence_keywords": ["..-. .-.. .- --.", "morse", "signal"],
+    "method_keywords": ["morse", "decode", "dot", "dash", "解码"],
+    "reproduction_keywords": ["morse decoder", "python", "CyberChef", "table"]
+  },
+  "scoring": {
+    "total": 100,
+    "wrong_flag_cap": 30,
+    "items": {
+      "vulnerability_type": 60,
+      "location_accuracy": 10,
+      "root_cause": 10,
+      "exploitability": 10,
+      "fix_quality": 10
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  }
+}

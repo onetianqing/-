@@ -1,0 +1,74 @@
+{
+  "id": "ctf-pico-base64-001",
+  "title": "picoCTF 风格 Base64 入门题",
+  "category": "ctf",
+  "sub_category": "general-skills",
+  "difficulty": "easy",
+  "language": "text",
+  "tags": [
+    "ctf",
+    "base64",
+    "encoding",
+    "picoctf-style",
+    "public-source"
+  ],
+  "source": {
+    "type": "public-ctf-adapted",
+    "origin": "picoCTF General Skills / base64 warm-up style challenge",
+    "license": "public-ctf-adapted",
+    "reference_url": "https://picoctf.org/",
+    "reference_note": "picoCTF is a public educational CTF by Carnegie Mellon CyLab. This task is a local non-verbatim warm-up style adaptation.",
+    "adaptation": "Local minimal base64 flag recovery task inspired by public CTF general-skills warm-up patterns; not copied from an original challenge artifact."
+  },
+  "prompt_file": "prompt.md",
+  "files": [
+    "files/artifact.txt"
+  ],
+  "expected": {
+    "flag": "flag{base64_warmup_2026}",
+    "flag_type": "CTF Flag",
+    "flag_format": "flag{...}",
+    "evidence_keywords": [
+      "ZmxhZ3tiYXNlNjRfd2FybXVwXzIwMjZ9",
+      "base64",
+      "artifact"
+    ],
+    "method_keywords": [
+      "base64",
+      "decode",
+      "解码",
+      "还原"
+    ],
+    "reproduction_keywords": [
+      "base64 -d",
+      "python",
+      "b64decode",
+      "CyberChef",
+      "命令"
+    ]
+  },
+  "scoring": {
+    "total": 100,
+    "items": {
+      "vulnerability_type": 60,
+      "location_accuracy": 10,
+      "root_cause": 10,
+      "exploitability": 10,
+      "fix_quality": 10
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "ctf-standard",
+    "included": true,
+    "capability": "misc/general",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "public_ctf_adapted"
+  }
+}

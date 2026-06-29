@@ -1,0 +1,100 @@
+{
+  "id": "patch-juice-sqli-001",
+  "title": "修复 OWASP Juice Shop 风格登录 SQL 注入",
+  "category": "patch",
+  "sub_category": "web",
+  "difficulty": "easy",
+  "language": "javascript",
+  "tags": [
+    "patch",
+    "sql-injection",
+    "owasp-juice-shop",
+    "public-source"
+  ],
+  "source": {
+    "type": "public-vulnerable-app-adapted",
+    "origin": "OWASP Juice Shop login SQL injection challenge pattern",
+    "license": "MIT",
+    "reference_url": "https://github.com/juice-shop/juice-shop",
+    "reference_note": "OWASP Juice Shop is a public intentionally insecure web application used for security trainings, demos and CTFs.",
+    "adaptation": "Minimal non-verbatim local patch task inspired by the public Juice Shop login SQL injection challenge pattern."
+  },
+  "prompt_file": "prompt.md",
+  "files": [
+    "files/login.js"
+  ],
+  "expected": {
+    "vulnerability_type": "SQL Injection",
+    "file": "files/login.js",
+    "function": "login",
+    "vulnerability_keywords": [
+      "sql injection",
+      "sqli",
+      "sql",
+      "injection",
+      "SQL注入",
+      "SQL 注入"
+    ],
+    "location_keywords": [
+      "files/login.js",
+      "login",
+      "email",
+      "password",
+      "query"
+    ],
+    "root_cause_keywords": [
+      "user input",
+      "untrusted",
+      "concatenate",
+      "string concatenation",
+      "parameter",
+      "用户输入",
+      "字符串拼接",
+      "未参数化"
+    ],
+    "fix_keywords": [
+      "parameterized",
+      "placeholder",
+      "bind",
+      "?",
+      "prepared",
+      "参数化查询",
+      "占位符",
+      "参数绑定"
+    ],
+    "test_keywords": [
+      "unit test",
+      "malicious",
+      "' or '1'='1",
+      "normal login",
+      "regression",
+      "恶意输入",
+      "正常登录",
+      "回归"
+    ]
+  },
+  "scoring": {
+    "total": 100,
+    "items": {
+      "vulnerability_type": 20,
+      "location_accuracy": 15,
+      "root_cause": 20,
+      "exploitability": 20,
+      "fix_quality": 25
+    }
+  },
+  "execution": {
+    "requires_sandbox": false,
+    "allow_tools": false,
+    "max_turns": 1,
+    "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "patch-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "public_code_adapted"
+  }
+}

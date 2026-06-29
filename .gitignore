@@ -28,8 +28,13 @@ results/**
 !results/**/
 !results/**/.gitkeep
 
+# Public source staging
+staging/**
+!staging/README.md
+
 # Logs and temporary files
 *.log
+!tasks/**/files/*.log
 *.tmp
 *.temp
 tmp/
@@ -39,3 +44,4 @@ temp/
 .DS_Store
 Thumbs.db
 desktop.ini
+

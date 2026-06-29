@@ -5,7 +5,12 @@
   "sub_category": "web",
   "difficulty": "easy",
   "language": "php",
-  "tags": ["command-injection", "php", "dvwa", "public-source"],
+  "tags": [
+    "command-injection",
+    "php",
+    "dvwa",
+    "public-source"
+  ],
   "source": {
     "type": "public-vulnerable-app-adapted",
     "origin": "Damn Vulnerable Web Application (DVWA)",
@@ -26,7 +31,13 @@
         "function": "ping_host",
         "line_hint": 10,
         "root_cause": "the ip request parameter is concatenated into a shell command passed to shell_exec",
-        "keywords": ["ip", "shell_exec", "ping", "command", "request"],
+        "keywords": [
+          "ip",
+          "shell_exec",
+          "ping",
+          "command",
+          "request"
+        ],
         "exploit_required": true
       }
     ],
@@ -47,5 +58,13 @@
     "allow_tools": false,
     "max_turns": 1,
     "timeout_seconds": 120
+  },
+  "benchmark": {
+    "suite": "audit-standard",
+    "included": true,
+    "capability": "web",
+    "weight": 1,
+    "difficulty_weight": 0.5,
+    "leakage_risk": "public_code_adapted"
   }
 }
